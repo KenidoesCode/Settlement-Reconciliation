@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js build output
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment and secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# Local database (PGlite writes a real PostgreSQL data directory here)
+.data/
+
+# Test and coverage output
+coverage/
+.vitest/
+test-results/
+
+# Python (eval service)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# Vercel link metadata
+.vercel/
+
+.vercel
+.env*
+.env
+.env.local
+.data/
+.env
+.env.local
+.data/

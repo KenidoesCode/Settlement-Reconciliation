@@ -1,0 +1,358 @@
+@import "tailwindcss";
+
+/* ==========================================================================
+   THE LEDGER HOUSE
+   ==========================================================================
+   Art deco, 1931: the visual language of the buildings finance was actually
+   conducted in. Midnight ground, brass rules, stepped chevrons, display capitals
+   with wide letterspacing, and a strict vertical grid.
+
+   The reason it fits, rather than being a mood: reconciliation is a two-column
+   problem. Books on one side, bank on the other, and a line drawn between them
+   when they agree. Deco is built on exactly that -- symmetry about a centre,
+   stepped forms converging on an axis -- so the ornament and the data structure
+   are the same shape. The tie-lines down the middle of the match view are the
+   one place boldness is spent, and they are drawn from real matched pairs.
+   ========================================================================== */
+
+@theme {
+  --color-midnight: #0a0f1a;
+  --color-midnight-raised: #111827;
+  --color-midnight-panel: #141d2e;
+  --color-rule: #26344d;
+  --color-rule-bright: #3a4c6e;
+
+  --color-brass: #c9a227;
+  --color-brass-dim: #8f7419;
+  --color-brass-bright: #e8c85a;
+
+  --color-ivory: #efe9dc;
+  --color-ivory-dim: #b9b2a3;
+  --color-ivory-faint: #7b7669;
+
+  --color-jade: #4fae87;
+  --color-carmine: #c8484d;
+  --color-amber: #d99a2b;
+
+  --font-deco: "Futura", "Century Gothic", "Avenir Next", "Trebuchet MS", sans-serif;
+  --font-figure: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-midnight);
+  color: var(--color-ivory);
+  font-family: var(--font-deco);
+  font-size: 15px;
+  line-height: 1.55;
+  /* A very shallow vertical sunburst, the way a deco lobby floor is inlaid.
+     Almost invisible; it stops the ground reading as flat black. */
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(201, 162, 39, 0.028) 0 1px,
+    transparent 1px 88px
+  );
+}
+
+/* --------------------------------------------------------------------------
+   The frieze: navigation as the entablature of a building.
+   -------------------------------------------------------------------------- */
+
+.frieze {
+  border-bottom: 1px solid var(--color-brass-dim);
+  background: linear-gradient(180deg, #0d1422 0%, var(--color-midnight) 100%);
+  position: relative;
+}
+
+/* The stepped chevron band under the frieze. Pure CSS, no image. */
+.frieze::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 4px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--color-brass-dim) 0 10px,
+      transparent 10px 14px,
+      var(--color-brass-dim) 14px 18px,
+      transparent 18px 30px
+    );
+  opacity: 0.5;
+}
+
+.frieze-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 1.5rem;
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0.7rem 1.75rem;
+}
+
+.frieze-link {
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ivory-faint);
+  padding-bottom: 3px;
+  border-bottom: 1px solid transparent;
+  white-space: nowrap;
+  transition: color 160ms ease;
+}
+
+.frieze-link:hover {
+  color: var(--color-ivory);
+}
+
+.frieze-link[aria-current="page"] {
+  color: var(--color-brass-bright);
+  border-bottom-color: var(--color-brass);
+}
+
+/* --------------------------------------------------------------------------
+   Panels
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--color-midnight-panel);
+  border: 1px solid var(--color-rule);
+  /* The brass reveal along the top edge: a deco cornice, one pixel of it. */
+  box-shadow: inset 0 1px 0 rgba(201, 162, 39, 0.28);
+  padding: 1.15rem 1.3rem;
+}
+
+.panel-title {
+  font-size: 0.625rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-brass);
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+/* --------------------------------------------------------------------------
+   Type
+   -------------------------------------------------------------------------- */
+
+.figure {
+  font-family: var(--font-figure);
+  font-size: 1.9rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ivory);
+}
+
+.figure-brass {
+  color: var(--color-brass-bright);
+}
+
+.label {
+  font-size: 0.5625rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-ivory-faint);
+}
+
+.mono {
+  font-family: var(--font-figure);
+  font-size: 0.75rem;
+}
+
+.display {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------------
+   THE TIE-LINE LEDGER -- the signature element
+   --------------------------------------------------------------------------
+   Two columns, books left and bank right, with a brass arc drawn between the
+   records the engine tied together. Deco is symmetry about a centre axis, and
+   so is reconciliation, so the ornament IS the data: every arc on the page is a
+   pair the engine actually resolved, and an exception draws a broken arc that
+   stops at the axis.
+   -------------------------------------------------------------------------- */
+
+.tie {
+  display: grid;
+  grid-template-columns: 1fr 84px 1fr;
+  align-items: stretch;
+  gap: 0;
+}
+
+.tie-axis {
+  position: relative;
+  border-left: 1px solid var(--color-rule);
+  border-right: 1px solid var(--color-rule);
+}
+
+.tie-arc {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-brass), transparent);
+}
+
+.tie-arc-broken {
+  background: repeating-linear-gradient(
+    90deg,
+    var(--color-carmine) 0 4px,
+    transparent 4px 9px
+  );
+}
+
+.tie-side {
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--color-rule);
+}
+
+/* --------------------------------------------------------------------------
+   Registers
+   -------------------------------------------------------------------------- */
+
+.register {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-figure);
+  font-size: 0.75rem;
+}
+
+.register th {
+  text-align: left;
+  font-family: var(--font-deco);
+  font-weight: 400;
+  font-size: 0.5625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-brass);
+  padding: 0 0.7rem 0.45rem 0;
+  border-bottom: 1px solid var(--color-brass-dim);
+}
+
+.register td {
+  padding: 0.45rem 0.7rem 0.45rem 0;
+  border-bottom: 1px solid var(--color-rule);
+  vertical-align: top;
+  color: var(--color-ivory-dim);
+}
+
+.register tbody tr:hover td {
+  background: rgba(201, 162, 39, 0.05);
+  color: var(--color-ivory);
+}
+
+/* --------------------------------------------------------------------------
+   Badges
+   -------------------------------------------------------------------------- */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.5625rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.55rem;
+  border: 1px solid currentColor;
+}
+
+.badge-resolved { color: var(--color-jade); }
+.badge-exception { color: var(--color-amber); }
+.badge-unresolved { color: var(--color-ivory-faint); }
+.badge-false { color: var(--color-carmine); }
+.badge-brass { color: var(--color-brass); }
+
+/* --------------------------------------------------------------------------
+   Motion. Both animations mean something.
+   -------------------------------------------------------------------------- */
+
+/* A tie-line is drawn, not revealed: the arc grows from the axis outward as a
+   match is rendered, which is the direction the engine actually works in. */
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.tie-arc {
+  transform-origin: center;
+  animation: draw 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* A run in flight sweeps the brass rule. It runs only while a reconciliation is
+   actually executing. */
+@keyframes sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(200%); }
+}
+
+.sweeping::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(232, 200, 90, 0.22), transparent);
+  animation: sweep 1.2s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.rise {
+  animation: rise 340ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tie-arc,
+  .rise {
+    animation: none !important;
+  }
+  .sweeping::after {
+    animation: none !important;
+    opacity: 0.25;
+  }
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.underlink {
+  border-bottom: 1px solid rgba(201, 162, 39, 0.4);
+}
+
+.underlink:hover {
+  border-bottom-color: var(--color-brass-bright);
+  color: var(--color-brass-bright);
+}
+
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}

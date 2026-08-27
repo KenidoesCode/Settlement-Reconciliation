@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "functions": {
+    "app/api/reconcile/route.ts": { "maxDuration": 60 },
+    "app/api/evaluate/route.ts": { "maxDuration": 60 },
+    "app/api/ingest/route.ts": { "maxDuration": 60 },
+    "app/api/demo/[scenario]/route.ts": { "maxDuration": 60 }
+  },
+  "env": {
+    "DATABASE_URL": "pglite://:memory:",
+    "ADJUDICATOR": "deterministic",
+    "LOG_LEVEL": "warn"
+  }
+}
