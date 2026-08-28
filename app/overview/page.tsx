@@ -59,6 +59,18 @@ export default async function OverviewPage() {
               {chain.intact ? "Audit chain intact" : "Audit chain broken"}
             </Badge>
             <Badge kind="brass">Synthetic data — not a real ledger</Badge>
+            <a
+              href="/api/export?format=csv"
+              className="badge badge-resolved hover:bg-[rgba(79,174,135,0.1)]"
+            >
+              Exception queue · CSV ↓
+            </a>
+            <a
+              href="/api/export?format=md"
+              className="badge badge-brass hover:bg-[rgba(201,162,39,0.1)]"
+            >
+              Reconciliation report ↓
+            </a>
           </div>
         </div>
 

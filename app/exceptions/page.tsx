@@ -99,7 +99,19 @@ export default async function ExceptionsPage({
         </div>
       </section>
 
-      <Panel title="By kind">
+      <Panel
+        title="By kind"
+        right={
+          <span className="flex gap-4">
+            <a href="/api/export?format=csv" className="underlink label">
+              Queue as CSV
+            </a>
+            <a href="/api/export?format=md" className="underlink label">
+              Full report
+            </a>
+          </span>
+        }
+      >
         <div className="flex flex-wrap gap-2">
           <a
             href="/exceptions"
