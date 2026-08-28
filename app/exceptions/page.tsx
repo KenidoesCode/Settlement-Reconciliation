@@ -9,6 +9,9 @@ import { inrCompact } from "@/shared/money";
 
 export const dynamic = "force-dynamic";
 
+/** Exception cards rendered per page. See the comment at the sort below. */
+const QUEUE_SIZE = 20;
+
 export default async function ExceptionsPage({
   searchParams,
 }: {
@@ -31,8 +34,17 @@ export default async function ExceptionsPage({
   const all = await db.select().from(exceptions).where(eq(exceptions.runId, system.id));
   const filtered = params.kind ? all.filter((row) => row.kind === params.kind) : all;
 
-  // Ordered by money at risk. See the note in the queue component.
-  const ordered = [...filtered].sort((a, b) => b.amountAtRiskMinor - a.amountAtRiskMinor).slice(0, 40);
+  /*
+    Ordered by money at risk. See the note in the queue component.
+
+    Twenty, not forty. Measured on the deployed site: forty cards shipped 226 KB
+    of HTML, most of it the explanation paragraph repeated on every card -- and
+    those paragraphs are long on purpose, because an exception that does not say
+    why it is an exception is a blank form. Twenty is more than a reviewer works
+    through in a sitting, the count is stated below, and the rest are one API
+    call away.
+  */
+  const ordered = [...filtered].sort((a, b) => b.amountAtRiskMinor - a.amountAtRiskMinor).slice(0, QUEUE_SIZE);
 
   const referencedIds = [
     ...new Set(ordered.flatMap((row) => [...row.recordIds, ...row.recommendedRecordIds])),
@@ -137,9 +149,9 @@ export default async function ExceptionsPage({
 
       <ExceptionQueue items={items} />
 
-      {filtered.length > 40 && (
+      {filtered.length > QUEUE_SIZE && (
         <p className="text-xs text-[var(--color-ivory-faint)]">
-          Showing the 40 largest of {filtered.length}. The rest are in the API at{" "}
+          Showing the {QUEUE_SIZE} largest of {filtered.length}. The rest are in the API at{" "}
           <code className="mono">/api/exceptions</code>.
         </p>
       )}
