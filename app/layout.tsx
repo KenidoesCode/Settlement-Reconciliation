@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { ensureBootstrapped } from "@/db/bootstrap";
 import { exceptions } from "@/db/schema";
 import { isNull } from "drizzle-orm";
-import { Frieze } from "@/ui/frieze";
+import { Chrome } from "@/ui/chrome";
 
 export const metadata: Metadata = {
   title: "Settlement Reconciliation",
@@ -21,8 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body>
-        <Frieze pendingExceptions={pending.length} />
-        <main className="page">{children}</main>
+        <Chrome pendingExceptions={pending.length}>{children}</Chrome>
       </body>
     </html>
   );

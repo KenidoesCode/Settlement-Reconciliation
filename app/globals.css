@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   THE LEDGER HOUSE
+   THE LEDGER HOUSE, AND THE RAIN OUTSIDE IT
    ==========================================================================
    Art deco, 1931: the visual language of the buildings finance was actually
-   conducted in. Midnight ground, brass rules, stepped chevrons, display capitals
-   with wide letterspacing, and a strict vertical grid.
+   conducted in, seen at two in the morning through a wet window. Midnight
+   ground, brass rules, stepped chevrons, display capitals with wide
+   letterspacing, a strict vertical grid -- and over all of it the grain, the
+   blind slats and the entrance sunburst of a room lit by one lamp.
 
    The reason it fits, rather than being a mood: reconciliation is a two-column
    problem. Books on one side, bank on the other, and a line drawn between them
@@ -13,6 +15,15 @@
    stepped forms converging on an axis -- so the ornament and the data structure
    are the same shape. The tie-lines down the middle of the match view are the
    one place boldness is spent, and they are drawn from real matched pairs.
+
+   The noir half is the other argument this product makes: two records, one
+   truth, string between them on a detective's board. Every thread on the
+   landing intro is a pair the engine actually resolved, and the threads that
+   stop short in carmine are a real many-to-one case it refused to decide.
+
+   The rule the whole skin is written against: if a visual choice makes a
+   number harder to read, the number wins. Texture lives on one fixed layer
+   BEHIND the content and never on top of it.
    ========================================================================== */
 
 @theme {
@@ -36,6 +47,10 @@
 
   --font-deco: "Futura", "Century Gothic", "Avenir Next", "Trebuchet MS", sans-serif;
   --font-figure: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  /* One easing for the whole product. Deco machinery starts hard and settles;
+     a bounce would be the wrong century. */
+  --ease-deco: cubic-bezier(0.16, 0.84, 0.24, 1);
 }
 
 * {
@@ -48,18 +63,54 @@ html {
 
 body {
   margin: 0;
+  position: relative;
   background: var(--color-midnight);
   color: var(--color-ivory);
   font-family: var(--font-deco);
   font-size: 15px;
   line-height: 1.55;
-  /* A very shallow vertical sunburst, the way a deco lobby floor is inlaid.
-     Almost invisible; it stops the ground reading as flat black. */
-  background-image: repeating-linear-gradient(
-    90deg,
-    rgba(201, 162, 39, 0.028) 0 1px,
-    transparent 1px 88px
-  );
+}
+
+/* --------------------------------------------------------------------------
+   THE GROUND
+   --------------------------------------------------------------------------
+   Every ambient texture on one fixed element behind the content, so the whole
+   atmosphere costs a single composited layer instead of a repaint per panel.
+   It is aria-hidden and pointer-events:none, and it is always BEHIND the
+   content -- nothing here is ever on top of a number.
+   -------------------------------------------------------------------------- */
+
+.ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    /* venetian blind slats, off-axis, the way a low lamp throws them */
+    repeating-linear-gradient(97deg, rgba(232, 200, 90, 0.03) 0 1px, transparent 1px 38px),
+    /* the entrance sunburst over the lobby */
+    radial-gradient(125% 62% at 50% -12%, rgba(201, 162, 39, 0.1), transparent 62%),
+    /* a pooled desk lamp, bottom left */
+    radial-gradient(48% 42% at 8% 108%, rgba(201, 162, 39, 0.055), transparent 70%),
+    /* the pinstripe floor inlay */
+    repeating-linear-gradient(90deg, rgba(201, 162, 39, 0.022) 0 1px, transparent 1px 88px);
+}
+
+/* Film grain. A 120px tile of fractal noise, inline as a data URI so it costs
+   no request and works offline -- the CSP allows data: under img-src and
+   nothing else is fetched. */
+.ground::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.page,
+.landing {
+  position: relative;
+  z-index: 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -67,9 +118,13 @@ body {
    -------------------------------------------------------------------------- */
 
 .frieze {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   border-bottom: 1px solid var(--color-brass-dim);
-  background: linear-gradient(180deg, #0d1422 0%, var(--color-midnight) 100%);
-  position: relative;
+  background: linear-gradient(180deg, rgba(13, 20, 34, 0.97) 0%, rgba(10, 15, 26, 0.93) 100%);
+  -webkit-backdrop-filter: blur(8px) saturate(125%);
+  backdrop-filter: blur(8px) saturate(125%);
 }
 
 /* The stepped chevron band under the frieze. Pure CSS, no image. */
@@ -101,36 +156,87 @@ body {
   padding: 0.7rem 1.75rem;
 }
 
+/* The house mark: a deco lozenge with a brass pip at its centre. */
+.frieze-mark {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  align-self: center;
+  border: 1px solid var(--color-brass);
+  transform: rotate(45deg);
+  background: radial-gradient(circle at 50% 50%, var(--color-brass-bright) 0 1.5px, transparent 1.6px);
+}
+
 .frieze-link {
+  position: relative;
   font-size: 0.6875rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--color-ivory-faint);
-  padding-bottom: 3px;
-  border-bottom: 1px solid transparent;
+  padding-bottom: 4px;
   white-space: nowrap;
-  transition: color 160ms ease;
+  transition: color 180ms ease;
+}
+
+/* The underline is drawn from the centre out: the same gesture as a tie-line. */
+.frieze-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--color-brass);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 260ms var(--ease-deco);
 }
 
 .frieze-link:hover {
   color: var(--color-ivory);
 }
 
+.frieze-link:hover::after {
+  transform: scaleX(1);
+}
+
 .frieze-link[aria-current="page"] {
   color: var(--color-brass-bright);
-  border-bottom-color: var(--color-brass);
+}
+
+.frieze-link[aria-current="page"]::after {
+  transform: scaleX(1);
+  background: var(--color-brass-bright);
 }
 
 /* --------------------------------------------------------------------------
    Panels
+   --------------------------------------------------------------------------
+   A deco frame is a double rule: an outer edge and a hairline set in from it.
+   The inner hairline is a pseudo-element rather than a second border so it
+   costs no layout, and the shadow is long and soft -- a card lying on a desk
+   under one lamp, not a floating web card.
    -------------------------------------------------------------------------- */
 
 .panel {
-  background: var(--color-midnight-panel);
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(239, 233, 220, 0.026) 0%, transparent 42%),
+    var(--color-midnight-panel);
   border: 1px solid var(--color-rule);
   /* The brass reveal along the top edge: a deco cornice, one pixel of it. */
-  box-shadow: inset 0 1px 0 rgba(201, 162, 39, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(201, 162, 39, 0.28),
+    0 24px 48px -34px rgba(0, 0, 0, 0.95);
   padding: 1.15rem 1.3rem;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(201, 162, 39, 0.11);
+  pointer-events: none;
 }
 
 .panel-title {
@@ -141,6 +247,21 @@ body {
   margin-bottom: 0.85rem;
   padding-bottom: 0.45rem;
   border-bottom: 1px solid var(--color-rule);
+}
+
+/* A ziggurat before the title: three brass steps, drawn in gradients so the
+   ornament ships as part of the rule rather than as an asset. */
+.panel-title > span:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 13px;
+  height: 7px;
+  margin-right: 0.55rem;
+  vertical-align: 1px;
+  background:
+    linear-gradient(var(--color-brass) 0 0) 0 100% / 13px 1.5px no-repeat,
+    linear-gradient(var(--color-brass) 0 0) 2px 50% / 9px 1.5px no-repeat,
+    linear-gradient(var(--color-brass) 0 0) 4px 0 / 5px 1.5px no-repeat;
 }
 
 /* --------------------------------------------------------------------------
@@ -157,6 +278,12 @@ body {
 
 .figure-brass {
   color: var(--color-brass-bright);
+}
+
+/* A figure sits under its own hairline, the way a total sits under a rule. */
+.figure-block {
+  border-top: 1px solid var(--color-rule);
+  padding-top: 0.6rem;
 }
 
 .label {
@@ -219,17 +346,31 @@ body {
 .tie-side {
   padding: 0.55rem 0.85rem;
   border-bottom: 1px solid var(--color-rule);
+  transition: background-color 160ms ease;
+}
+
+.tie-side:hover {
+  background: rgba(201, 162, 39, 0.045);
 }
 
 /* --------------------------------------------------------------------------
    Registers
+   --------------------------------------------------------------------------
+   A ledger has a margin rule down its left edge and every figure squared on
+   the same grid. Both of those are the stylesheet's job, not the table's.
    -------------------------------------------------------------------------- */
+
+.registry {
+  border-left: 1px solid rgba(201, 162, 39, 0.22);
+  padding-left: 0.85rem;
+}
 
 .register {
   width: 100%;
   border-collapse: collapse;
   font-family: var(--font-figure);
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .register th {
@@ -249,11 +390,18 @@ body {
   border-bottom: 1px solid var(--color-rule);
   vertical-align: top;
   color: var(--color-ivory-dim);
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .register tbody tr:hover td {
-  background: rgba(201, 162, 39, 0.05);
+  background: rgba(201, 162, 39, 0.055);
   color: var(--color-ivory);
+}
+
+/* The hovered row is ticked in the margin, the way a controller marks the line
+   they are working. */
+.register tbody tr:hover td:first-child {
+  box-shadow: inset 2px 0 0 var(--color-brass);
 }
 
 /* --------------------------------------------------------------------------
@@ -269,6 +417,7 @@ body {
   text-transform: uppercase;
   padding: 0.22rem 0.55rem;
   border: 1px solid currentColor;
+  transition: background-color 160ms ease;
 }
 
 .badge-resolved { color: var(--color-jade); }
@@ -278,7 +427,134 @@ body {
 .badge-brass { color: var(--color-brass); }
 
 /* --------------------------------------------------------------------------
-   Motion. Both animations mean something.
+   Controls
+   --------------------------------------------------------------------------
+   One button, four tones. The inner hairline appears on hover so the control
+   picks up the same double-rule frame the panels have, and the press is a real
+   one-pixel depression rather than a colour change.
+   -------------------------------------------------------------------------- */
+
+.act {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.05rem;
+  overflow: hidden;
+  font-size: 0.625rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ivory-dim);
+  border: 1px solid var(--color-rule-bright);
+  background: linear-gradient(180deg, rgba(239, 233, 220, 0.035), transparent);
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 110ms ease;
+}
+
+.act::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid transparent;
+  transition: border-color 180ms ease;
+  pointer-events: none;
+}
+
+.act:hover:not(:disabled) {
+  color: var(--color-brass-bright);
+  border-color: var(--color-brass);
+  background-color: rgba(201, 162, 39, 0.09);
+}
+
+.act:hover:not(:disabled)::before {
+  border-color: rgba(201, 162, 39, 0.3);
+}
+
+.act:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.act:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.act-brass { color: var(--color-brass-bright); border-color: var(--color-brass); }
+.act-jade { color: var(--color-jade); border-color: rgba(79, 174, 135, 0.55); }
+.act-carmine { color: var(--color-carmine); border-color: rgba(200, 72, 77, 0.55); }
+.act-amber { color: var(--color-amber); border-color: rgba(217, 154, 43, 0.55); }
+
+.act-jade:hover:not(:disabled) { color: var(--color-jade); border-color: var(--color-jade); background-color: rgba(79, 174, 135, 0.1); }
+.act-carmine:hover:not(:disabled) { color: var(--color-carmine); border-color: var(--color-carmine); background-color: rgba(200, 72, 77, 0.1); }
+.act-amber:hover:not(:disabled) { color: var(--color-amber); border-color: var(--color-amber); background-color: rgba(217, 154, 43, 0.1); }
+
+.field {
+  font-family: var(--font-figure);
+  font-size: 0.8125rem;
+  color: var(--color-ivory);
+  background: rgba(10, 15, 26, 0.6);
+  border: 1px solid var(--color-rule-bright);
+  padding: 0.4rem 0.55rem;
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.field:hover {
+  border-color: var(--color-brass-dim);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--color-brass);
+  background: rgba(201, 162, 39, 0.05);
+}
+
+/* Focus is brass and unmistakable. Keyboard operation of a finance console is
+   not an edge case. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 1px solid var(--color-brass-bright);
+  outline-offset: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   Empty, loading and error states
+   -------------------------------------------------------------------------- */
+
+.state {
+  border: 1px dashed var(--color-rule-bright);
+  padding: clamp(1.4rem, 5vw, 2.4rem) 1.25rem;
+  text-align: center;
+  color: var(--color-ivory-faint);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(201, 162, 39, 0.018) 0 6px,
+    transparent 6px 12px
+  );
+}
+
+/* A skeleton rules the space it is waiting to fill and a brass light passes
+   along it. Ledger lines, not grey boxes. */
+.skeleton {
+  height: 10px;
+  background: var(--color-rule);
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(232, 200, 90, 0.35), transparent);
+  animation: sweep 1.4s linear infinite;
+}
+
+/* --------------------------------------------------------------------------
+   Motion. Everything here means something.
    -------------------------------------------------------------------------- */
 
 /* A tie-line is drawn, not revealed: the arc grows from the axis outward as a
@@ -296,7 +572,7 @@ body {
 
 .tie-arc {
   transform-origin: center;
-  animation: draw 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: draw 480ms var(--ease-deco) both;
 }
 
 /* A run in flight sweeps the brass rule. It runs only while a reconciliation is
@@ -316,24 +592,444 @@ body {
   pointer-events: none;
 }
 
+/* Data arriving. A row lifts into place; a card is dealt onto the board with a
+   fraction of a degree of rotation, because evidence pinned by hand is never
+   quite square. Transform and opacity only. */
 @keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes deal {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) rotate(-0.45deg) scale(0.995); }
   to { opacity: 1; transform: none; }
 }
 
 .rise {
-  animation: rise 340ms ease both;
+  animation: rise 420ms var(--ease-deco) both;
 }
 
+/* A course of panels deals itself in, left to right.
+
+   The cap is the point: :nth-child(n+11) pins every card past the tenth to the
+   same delay, so a course of four takes 135ms and a course of forty still
+   finishes in 450ms. Static rules rather than an inline style, because these
+   are server-rendered lists and the delay is a property of the position. */
+.deal > * {
+  animation: deal 460ms var(--ease-deco) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.deal > *:nth-child(2) { --i: 1; }
+.deal > *:nth-child(3) { --i: 2; }
+.deal > *:nth-child(4) { --i: 3; }
+.deal > *:nth-child(5) { --i: 4; }
+.deal > *:nth-child(6) { --i: 5; }
+.deal > *:nth-child(7) { --i: 6; }
+.deal > *:nth-child(8) { --i: 7; }
+.deal > *:nth-child(9) { --i: 8; }
+.deal > *:nth-child(10) { --i: 9; }
+.deal > *:nth-child(n + 11) { --i: 10; }
+
+/* --------------------------------------------------------------------------
+   THE GATE -- the page-to-page transition
+   --------------------------------------------------------------------------
+   A ledger house has a vault, and the vault has a two-leaf brass gate. The
+   leaves stand closed on arrival, hold for a beat, then draw back to either
+   side; a brass seam runs down the axis and snaps as they part.
+
+   Three properties of this thing are not decorative:
+
+   * It is pointer-events:none for its whole life, so it can never eat a click.
+   * It mounts only AFTER a navigation has committed, so a navigation that
+     fails leaves nothing on screen -- there is no state in which the gate is
+     closed and waiting for something.
+   * It removes itself on animationend AND on a timer, because a backgrounded
+     tab does not deliver animationend.
+   -------------------------------------------------------------------------- */
+
+.gate {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+
+.gate-leaf {
+  position: relative;
+  background:
+    repeating-linear-gradient(180deg, rgba(201, 162, 39, 0.07) 0 1px, transparent 1px 15px),
+    linear-gradient(180deg, #0d1524 0%, #070b14 100%);
+}
+
+.gate-leaf::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, var(--color-brass), transparent);
+}
+
+.gate-leaf-l {
+  animation: gate-l 620ms var(--ease-deco) both;
+}
+
+.gate-leaf-l::after { right: 0; }
+
+.gate-leaf-r {
+  animation: gate-r 620ms var(--ease-deco) both;
+}
+
+.gate-leaf-r::after { left: 0; }
+
+/* The seam: one brass thread down the axis, cut in the middle as the leaves
+   go. The tie-line gesture, played backwards. */
+.gate-seam {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  margin-left: -0.5px;
+  background: linear-gradient(180deg, transparent, var(--color-brass-bright), transparent);
+  transform-origin: center;
+  animation: seam 620ms var(--ease-deco) both;
+}
+
+@keyframes gate-l {
+  0%, 14% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-100.5%, 0, 0); }
+}
+
+@keyframes gate-r {
+  0%, 14% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(100.5%, 0, 0); }
+}
+
+@keyframes seam {
+  0%, 14% { transform: scaleY(1); opacity: 1; }
+  55% { transform: scaleY(0.04); opacity: 1; }
+  100% { transform: scaleY(0); opacity: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   THE INTRO -- rain on the glass, the ledger riffles, the threads are drawn
+   --------------------------------------------------------------------------
+   Five scenes on one sticky stage. Scroll position drives opacity and a small
+   translate per scene and nothing else: no scroll handler reads layout, and
+   every animated property is composited.
+   -------------------------------------------------------------------------- */
+
+.intro {
+  position: relative;
+}
+
+.intro-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  display: grid;
+  isolation: isolate;
+}
+
+.rain {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.scene {
+  grid-area: 1 / 1;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: clamp(0.7rem, 2vw, 1.3rem);
+  padding: clamp(1.1rem, 5vw, 3rem);
+  text-align: center;
+  will-change: transform, opacity;
+}
+
+/* The sunburst over the entrance. A repeating conic gradient masked to a fan:
+   the most recognisable deco shape there is, and it costs one element. */
+.sunburst {
+  position: absolute;
+  inset: -30% -20% 0;
+  z-index: 0;
+  background: repeating-conic-gradient(
+    from 90deg at 50% 100%,
+    rgba(201, 162, 39, 0.085) 0 2.4deg,
+    transparent 2.4deg 9deg
+  );
+  -webkit-mask-image: radial-gradient(62% 68% at 50% 100%, #000, transparent 74%);
+  mask-image: radial-gradient(62% 68% at 50% 100%, #000, transparent 74%);
+  pointer-events: none;
+}
+
+/* Frosted glass: the office door, lettered in gold leaf. */
+.pane {
+  position: relative;
+  max-width: min(94vw, 44rem);
+  padding: clamp(1.1rem, 4vw, 2.4rem) clamp(0.9rem, 5vw, 3rem);
+  background: linear-gradient(155deg, rgba(239, 233, 220, 0.06), rgba(239, 233, 220, 0.015));
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  box-shadow: 0 40px 90px -50px #000, inset 0 1px 0 rgba(239, 233, 220, 0.14);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+.pane::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(201, 162, 39, 0.16);
+  pointer-events: none;
+}
+
+.intro-title {
+  font-family: var(--font-deco);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  line-height: 1.02;
+  font-size: clamp(1.25rem, 6.2vw, 4.4rem);
+  color: var(--color-brass-bright);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7), 0 0 26px rgba(201, 162, 39, 0.2);
+}
+
+.kicker {
+  font-size: 0.6875rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--color-ivory-faint);
+}
+
+.scene-note {
+  font-size: clamp(0.8125rem, 1.6vw, 0.9375rem);
+  line-height: 1.6;
+  max-width: 40rem;
+  color: var(--color-ivory-dim);
+}
+
+/* The riffle: ledger leaves turning about their spine. */
+.riffle {
+  position: relative;
+  width: min(86vw, 26rem);
+  height: clamp(8rem, 30vw, 13rem);
+  perspective: 1100px;
+}
+
+.leaf {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  border: 1px solid rgba(120, 100, 60, 0.55);
+  box-shadow: 0 18px 40px -26px #000;
+  background:
+    /* the red margin rule every ledger page carries */
+    linear-gradient(90deg, transparent 0 14%, rgba(160, 60, 60, 0.5) 14% calc(14% + 1px), transparent calc(14% + 1px)),
+    /* ruled lines */
+    repeating-linear-gradient(180deg, transparent 0 13px, rgba(90, 75, 45, 0.35) 13px 14px),
+    linear-gradient(160deg, #e6dfcd 0%, #cfc6ae 100%);
+}
+
+/* The match-board: two columns of pinned records, brass string between them. */
+.board {
+  display: grid;
+  grid-template-columns: 1fr minmax(2.25rem, 7rem) 1fr;
+  align-items: center;
+  gap: clamp(0.35rem, 1.6vw, 0.9rem);
+  width: min(94vw, 44rem);
+}
+
+.pin {
+  position: relative;
+  border: 1px solid var(--color-rule-bright);
+  background: linear-gradient(180deg, rgba(239, 233, 220, 0.05), rgba(20, 29, 46, 0.85));
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+}
+
+.pin-right { text-align: right; }
+
+/* The brass pin holding the card to the board. */
+.pin::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -3px;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: var(--color-brass-bright);
+  box-shadow: 0 0 6px rgba(232, 200, 90, 0.6);
+}
+
+.pin-right::after { right: auto; left: -3px; }
+
+.thread {
+  height: 1px;
+  transform-origin: center;
+  background: linear-gradient(90deg, transparent, var(--color-brass) 22%, var(--color-brass) 78%, transparent);
+}
+
+/* An exception does not reach the other side. It stops, dashed, in carmine. */
+.thread-cut {
+  background: repeating-linear-gradient(90deg, var(--color-carmine) 0 4px, transparent 4px 9px);
+  opacity: 0.85;
+}
+
+/* The hand-off plaque. Brass fills it from the centre out on hover, which is
+   the drawn-thread gesture again. */
+.plaque {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  overflow: hidden;
+  padding: clamp(0.7rem, 2.4vw, 1rem) clamp(1.1rem, 5vw, 2.6rem);
+  border: 1px solid var(--color-brass);
+  color: var(--color-brass-bright);
+  font-size: clamp(0.6875rem, 1.5vw, 0.8125rem);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  transition: color 200ms ease;
+}
+
+.plaque::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgba(201, 162, 39, 0.16);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 320ms var(--ease-deco);
+}
+
+.plaque:hover::before,
+.plaque:focus-visible::before {
+  transform: scaleX(1);
+}
+
+.plaque::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(201, 162, 39, 0.32);
+  pointer-events: none;
+}
+
+/* The scene rail: brass ticks down the right edge, the one you are in lit. No
+   text, so nothing here can be too small to read. */
+.intro-rail {
+  position: absolute;
+  z-index: 2;
+  right: clamp(0.5rem, 2vw, 1.6rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.intro-rail i {
+  display: block;
+  width: 1px;
+  height: 20px;
+  background: var(--color-rule-bright);
+  transform-origin: center;
+  transition: background-color 300ms ease, transform 300ms var(--ease-deco);
+}
+
+.intro-rail i.on {
+  background: var(--color-brass-bright);
+  transform: scaleX(3);
+}
+
+/* The way out, always reachable, first in the tab order. */
+.intro-skip {
+  position: absolute;
+  z-index: 3;
+  top: clamp(0.6rem, 2vw, 1.4rem);
+  right: clamp(0.6rem, 2vw, 1.4rem);
+  font-size: 0.6875rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-ivory-faint);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.4);
+  transition: color 180ms ease;
+}
+
+.intro-skip:hover {
+  color: var(--color-brass-bright);
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); opacity: 0.5; }
+  50% { transform: translateY(5px); opacity: 1; }
+}
+
+.bob {
+  animation: bob 2.2s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   REDUCED MOTION
+   --------------------------------------------------------------------------
+   Near zero, not merely faster. Nothing animates, the gate never mounts (that
+   is decided in the component), the rain canvas paints a single still frame,
+   and the intro drops out of its sticky stage into a plain stacked document.
+   -------------------------------------------------------------------------- */
+
 @media (prefers-reduced-motion: reduce) {
-  .tie-arc,
-  .rise {
-    animation: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
-  .sweeping::after {
+
+  .sweeping::after,
+  .skeleton::after {
     animation: none !important;
     opacity: 0.25;
   }
+
+  .bob {
+    animation: none !important;
+  }
+}
+
+/* The still intro. Applied by the component when the user asks for reduced
+   motion. !important because the scroll scrubber writes inline styles, and an
+   important declaration in a stylesheet beats a plain inline one -- which is
+   exactly the escape hatch needed here. */
+.intro-still .intro-stage {
+  position: static;
+  height: auto;
+  display: block;
+}
+
+.intro-still .scene {
+  opacity: 1 !important;
+  transform: none !important;
+  padding-block: clamp(2.5rem, 9vw, 5rem);
+  border-bottom: 1px solid var(--color-rule);
+}
+
+.intro-still .rain,
+.intro-still .intro-rail {
+  display: none;
 }
 
 a {
@@ -343,6 +1039,7 @@ a {
 
 .underlink {
   border-bottom: 1px solid rgba(201, 162, 39, 0.4);
+  transition: color 160ms ease, border-color 160ms ease;
 }
 
 .underlink:hover {
@@ -722,7 +1419,12 @@ h1.display {
   .plate-title,
   .sheet-title,
   .panel-title,
-  th {
+  th,
+  /* Added with the 2026 re-skin: the button, the intro kickers and the pinned
+     record cards all set type below 11px at their desk sizes. */
+  .act,
+  .kicker,
+  .pin .label {
     font-size: 0.6875rem;
     letter-spacing: 0.1em;
   }
@@ -739,6 +1441,7 @@ h1.display {
      single max-width media query, so nothing above 1023px is affected. */
   .mono, .label,
   .frieze-note, th,
+  .act, .kicker, .intro-skip,
   [class*="text-[10px]"],
   [class*="text-[0.65rem]"],
   [class*="text-[0.625rem]"],

@@ -28,7 +28,10 @@ export function Frieze({ pendingExceptions }: { pendingExceptions: number }) {
   return (
     <header className="frieze">
       <div className="frieze-inner">
-        <Link href="/overview" className="mr-3 shrink-0">
+        {/* The brandmark returns to the front elevation, the way the name over
+            a door is the way back out of the building. */}
+        <Link href="/" className="mr-3 flex shrink-0 items-center gap-2.5">
+          <span className="frieze-mark" aria-hidden />
           <span className="display frieze-brandmark text-[var(--color-brass-bright)]">
             SETTLEMENT RECONCILIATION
           </span>
