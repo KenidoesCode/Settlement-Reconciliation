@@ -33,7 +33,7 @@ export function Frieze({ pendingExceptions }: { pendingExceptions: number }) {
             SETTLEMENT RECONCILIATION
           </span>
         </Link>
-        <nav aria-label="Sections" className="frieze-nav flex flex-wrap gap-x-6 gap-y-1">
+        <nav aria-label="Sections" className="frieze-nav flex flex-nowrap overflow-x-auto nav-strip md:flex-wrap md:overflow-visible gap-x-6 gap-y-1">
           {LINKS.map((link) => (
             <Link
               key={link.href}

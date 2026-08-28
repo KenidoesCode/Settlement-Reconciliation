@@ -594,3 +594,109 @@ h1.display {
     grid-template-columns: 1fr clamp(56px, 8vw, 84px) 1fr;
   }
 }
+
+
+/* ==========================================================================
+   SMALL-SCREEN FLOOR
+   ==========================================================================
+   Added after measuring the deployed site in a real headless browser at 390px
+   rather than reading the stylesheet. Two things the CSS alone did not reveal:
+
+   1. The navigation stood between 104px and 176px tall -- on a 844px phone the
+      worst case spent a fifth of the screen before any content. It wrapped to
+      three, four or five lines. It is now one scrolling strip.
+
+      Note the two levels. Stopping the outer row wrapping squeezes the inner
+      <nav> to its minimum content width, and that nav then breaks its own links
+      onto separate lines -- so the strip becomes one row containing a four-line
+      block and nothing improves. Both levels have to stop wrapping and nothing
+      in the strip may shrink.
+
+   2. Micro-type. The smallest rendered text was 9px, and on the worst page 261
+      separate elements sat under 11px. Nine-pixel uppercase text at wide
+      letter-spacing is legible on a laptop at arm's length and is simply not
+      legible on a phone. The desktop sizes are deliberate and unchanged; these
+      are floors that apply only where the screen is small.
+
+   Not wrapped in @layer, deliberately: the base rules in this file are
+   unlayered, and unlayered CSS beats anything in a cascade layer regardless of
+   source order. A rule written inside @layer components would lose silently and
+   the stylesheet would claim a behaviour it did not have.
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  /* The nav strip. Two levels: the row that holds the brand and the sections,
+     and the <nav> inside it. Stopping only the outer one squeezes the inner nav
+     to its minimum content width and it breaks its own links onto separate
+     lines, so the strip becomes one row containing a four-line block and
+     nothing improves. Nothing in the strip may shrink either. */
+  .nav-strip,
+  .dex-nav,
+  .index-strip,
+  .selectors,
+  .faceplate-inner,
+  .faceplate-nav,
+  .frieze-inner,
+  .rail,
+  .navsheets,
+  .masthead-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-strip::-webkit-scrollbar,
+  .dex-nav::-webkit-scrollbar,
+  .index-strip::-webkit-scrollbar,
+  .selectors::-webkit-scrollbar,
+  .faceplate-inner::-webkit-scrollbar,
+  .faceplate-nav::-webkit-scrollbar,
+  .frieze-inner::-webkit-scrollbar,
+  .rail::-webkit-scrollbar,
+  .navsheets::-webkit-scrollbar,
+  .masthead-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-strip > *,
+  .nav-strip nav,
+  .nav-strip nav > *,
+  .dex-nav > *,
+  .index-strip > *,
+  .selectors > *,
+  .faceplate-inner > *,
+  .faceplate-nav > *,
+  .frieze-inner > *,
+  .rail > *,
+  .navsheets > * {
+    flex: none;
+  }
+
+  .nav-strip nav,
+  .faceplate-inner nav,
+  .frieze-inner nav,
+  .rail nav {
+    flex-wrap: nowrap;
+  }
+
+  /* Micro-type floor. These classes render at 9px on a laptop by design; at
+     390px that is not readable text. Eleven pixels is the floor, applied only
+     here -- the desktop sizes above are untouched. */
+  .label,
+  .lbl,
+  .caption,
+  .meta,
+  .tag,
+  .chip,
+  .badge,
+  .stamp,
+  .key,
+  .plate-title,
+  .sheet-title,
+  .panel-title,
+  th {
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+  }
+}
