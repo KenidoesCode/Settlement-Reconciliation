@@ -696,8 +696,17 @@ h1.display {
 
    Deliberately outside @layer: unlayered rules beat layered ones regardless of
    source order, and these must win.
+/* The floor also applies to any coarse-pointer device at ANY width.
+
+   Width alone cannot tell a tablet from a laptop. An iPad in landscape is
+   1024px or wider and is still held at about a third of a metre, where 9px
+   uppercase at 0.18em tracking is not comfortable; a laptop at the same width
+   is at arm's length, where it is a deliberate and legible choice. The pointer
+   media feature separates the two, and it reports the PRIMARY input -- a
+   Windows laptop with a touchscreen and a trackpad stays "fine" and keeps the
+   designed sizes, which is the intent.
    --------------------------------------------------------------------------- */
-@media (max-width: 1023px) {
+@media (max-width: 1023px), (pointer: coarse) {
   /* Micro-type floor. These classes render at 9px on a laptop by design; at
      390px -- and at 768px -- that is not readable text. Eleven pixels is the
      floor; the desktop sizes above 1023px are untouched. */
