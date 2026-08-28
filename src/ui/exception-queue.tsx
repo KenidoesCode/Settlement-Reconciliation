@@ -88,6 +88,21 @@ export function ExceptionQueue({ items }: { items: QueueItem[] }) {
     <div className="space-y-4">
       {error && <p className="text-sm text-[var(--color-carmine)]">{error}</p>}
 
+      {/*
+        Same disclosure as the run launcher, for the same reason. A review posted
+        here is recorded and audited for real, in the API function's database.
+        The queue is rendered by a different function, so the card will not
+        change. A button that looked like it worked and did nothing would be
+        worse than a button that says what it did.
+      */}
+      <p className="border-l-2 border-[var(--color-amber)] pl-3 text-xs leading-relaxed text-[var(--color-ivory-dim)]">
+        <span className="label text-[var(--color-amber)]">Note on this deployment.</span> A decision
+        below is recorded and appended to the audit chain for real, but this card will not visibly
+        change: the demo runs an in-process database per serverless function, so the write lands
+        somewhere the page renderer cannot read. Point <code className="mono">DATABASE_URL</code> at
+        a PostgreSQL server and the queue updates as you work it.
+      </p>
+
       {items.map((item, index) => (
         <article
           key={item.id}

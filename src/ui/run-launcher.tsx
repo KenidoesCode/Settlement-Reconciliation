@@ -102,6 +102,27 @@ export function RunLauncher() {
 
       {error && <p className="text-sm text-[var(--color-carmine)]">{error}</p>}
 
+      {/*
+        The honest note.
+
+        On this deployment DATABASE_URL is pglite://:memory:, so every serverless
+        function instance holds its own database. The run below is real -- it is
+        computed against a real corpus and the numbers are its actual output --
+        but it was written to the API function's memory, and the History table on
+        this page is rendered by a different function that never saw it.
+
+        Saying so is not an apology. A launcher that appeared to add a row and
+        silently did not would be the dishonest version.
+      */}
+      <p className="border-l-2 border-[var(--color-amber)] pl-3 text-xs leading-relaxed text-[var(--color-ivory-dim)]">
+        <span className="label text-[var(--color-amber)]">Note on this deployment.</span> The run is
+        real and its numbers are computed live, but it will not appear in the History table below.
+        This demo runs an in-process database per serverless function, so a write from the API
+        function is invisible to the page function that renders the table. Point{" "}
+        <code className="mono">DATABASE_URL</code> at any PostgreSQL server — the driver already
+        supports it — and both the run and the table come from the same place.
+      </p>
+
       {result && (
         <div className="rise grid gap-4 border-t border-[var(--color-rule)] pt-4 sm:grid-cols-3 lg:grid-cols-6">
           <Stat label="records" value={String(result.recordCount)} />
