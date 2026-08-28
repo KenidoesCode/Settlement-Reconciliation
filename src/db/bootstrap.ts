@@ -5,6 +5,7 @@ import { reconcile } from "../match/reconcile";
 import { compareWithBaseline } from "../eval/evaluate";
 import { getEnv } from "../shared/env";
 import { logger } from "../shared/logger";
+import { withDeterministicIds } from "../shared/ids";
 
 /**
  * Bootstrap.
@@ -38,10 +39,19 @@ export async function ensureBootstrapped(): Promise<void> {
       return;
     }
 
-    const ingested = await ingestGeneratedCorpus(db);
-    const baseline = await reconcile(db, { strategy: "baseline-exact", label: "Baseline: exact join" });
-    const system = await reconcile(db, { strategy: "fuzzy+adjudicator", label: "Fuzzy + adjudicator" });
-    const comparison = await compareWithBaseline(db, system.runId, baseline.runId);
+    // Every id minted inside this block is a counter, not a clock. See the
+    // comment in shared/ids.ts: separate serverless functions seed separate
+    // in-memory databases, and without this they disagree about what each row
+    // is called.
+    const { ingested, comparison } = await withDeterministicIds(async () => {
+      const ingestedCorpus = await ingestGeneratedCorpus(db);
+      const baseline = await reconcile(db, { strategy: "baseline-exact", label: "Baseline: exact join" });
+      const system = await reconcile(db, { strategy: "fuzzy+adjudicator", label: "Fuzzy + adjudicator" });
+      return {
+        ingested: ingestedCorpus,
+        comparison: await compareWithBaseline(db, system.runId, baseline.runId),
+      };
+    });
 
     logger.info("bootstrap_complete", {
       durationMs: Date.now() - started,
