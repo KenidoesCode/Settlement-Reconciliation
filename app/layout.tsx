@@ -22,7 +22,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en">
       <body>
         <Frieze pendingExceptions={pending.length} />
-        <main className="mx-auto max-w-[1560px] px-7 py-8">{children}</main>
+        <main className="page">{children}</main>
       </body>
     </html>
   );

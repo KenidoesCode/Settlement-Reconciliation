@@ -33,7 +33,7 @@ export default async function AuditPage() {
       </div>
 
       <section className="panel">
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="course-figures">
           <Figure value={String(chain.count)} caption="receipts" />
           <Figure
             value={String(chain.breaks.length)}
@@ -50,56 +50,60 @@ export default async function AuditPage() {
 
       {chain.breaks.length > 0 && (
         <Panel title="Broken links">
-          <table className="register">
-            <thead>
-              <tr>
-                <th>Sequence</th>
-                <th>Receipt</th>
-                <th>Claims predecessor</th>
-                <th>Actual predecessor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {chain.breaks.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.sequence}</td>
-                  <td>{entry.id}</td>
-                  <td>{entry.claimed?.slice(0, 20) ?? "null"}</td>
-                  <td>{entry.actual?.slice(0, 20) ?? "null"}</td>
+          <div className="registry">
+            <table className="register">
+              <thead>
+                <tr>
+                  <th>Sequence</th>
+                  <th>Receipt</th>
+                  <th>Claims predecessor</th>
+                  <th>Actual predecessor</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {chain.breaks.map((entry) => (
+                  <tr key={entry.id}>
+                    <td>{entry.sequence}</td>
+                    <td>{entry.id}</td>
+                    <td>{entry.claimed?.slice(0, 20) ?? "null"}</td>
+                    <td>{entry.actual?.slice(0, 20) ?? "null"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
 
       <Panel title="Receipts">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Seq</th>
-              <th>Event</th>
-              <th>Payload hash</th>
-              <th>Previous</th>
-              <th>Correlation</th>
-              <th>When</th>
-            </tr>
-          </thead>
-          <tbody>
-            {receipts.map((receipt, i) => (
-              <tr key={receipt.id} className="rise" style={{ animationDelay: Math.min(i, 16) * 22 + "ms" }}>
-                <td className="text-[var(--color-ivory-faint)]">{receipt.sequence}</td>
-                <td className="text-[var(--color-ivory)]">{receipt.eventType}</td>
-                <td className="text-[var(--color-brass-bright)]" title={receipt.payloadHash}>
-                  {receipt.payloadHash.slice(0, 18)}
-                </td>
-                <td title={receipt.previousHash ?? ""}>{receipt.previousHash?.slice(0, 14) ?? "genesis"}</td>
-                <td>{receipt.correlationId.slice(0, 14)}</td>
-                <td>{receipt.occurredAt.toISOString().slice(0, 16).replace("T", " ")}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Seq</th>
+                <th>Event</th>
+                <th>Payload hash</th>
+                <th>Previous</th>
+                <th>Correlation</th>
+                <th>When</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {receipts.map((receipt, i) => (
+                <tr key={receipt.id} className="rise" style={{ animationDelay: Math.min(i, 16) * 22 + "ms" }}>
+                  <td className="text-[var(--color-ivory-faint)]">{receipt.sequence}</td>
+                  <td className="text-[var(--color-ivory)]">{receipt.eventType}</td>
+                  <td className="text-[var(--color-brass-bright)]" title={receipt.payloadHash}>
+                    {receipt.payloadHash.slice(0, 18)}
+                  </td>
+                  <td title={receipt.previousHash ?? ""}>{receipt.previousHash?.slice(0, 14) ?? "genesis"}</td>
+                  <td>{receipt.correlationId.slice(0, 14)}</td>
+                  <td>{receipt.occurredAt.toISOString().slice(0, 16).replace("T", " ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
     </div>
   );

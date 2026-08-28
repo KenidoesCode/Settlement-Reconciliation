@@ -59,7 +59,7 @@ export default async function DeveloperPage() {
         <h1 className="display text-2xl text-[var(--color-ivory)]">Everything is reachable over HTTP</h1>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="course-panels">
         <Panel title="Endpoints">
           <div className="space-y-3">
             {ENDPOINTS.map((endpoint) => (
@@ -113,7 +113,7 @@ export default async function DeveloperPage() {
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="course-panels">
         <Panel title="Corpus composition">
           <div className="space-y-2">
             {Object.entries(SHAPE_MIX).map(([shape, count]) => (

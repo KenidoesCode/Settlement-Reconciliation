@@ -105,7 +105,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
                 style={{ top: 34 + i * 96 + "px", animationDelay: 120 + i * 90 + "ms" }}
               />
             ))}
-            <div className="absolute inset-x-0 bottom-2 text-center">
+            <div className="tie-residual absolute inset-x-0 bottom-2 text-center">
               <p className="label">residual</p>
               <p
                 className={
@@ -137,7 +137,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
+        <div className="course-rows mt-5">
           <Row label="Books total" value={inr(booksTotal)} />
           <Row label="Bank total" value={inr(bankTotal)} />
           <Row
@@ -152,7 +152,7 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
         </p>
       </Panel>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="course-panels">
         <Panel title="Why the engine tied these together">
           <ul className="space-y-2">
             {match.rationale.map((reason, i) => (
@@ -187,26 +187,28 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
               No candidate rows retained for this match. Candidates are persisted as a capped sample.
             </p>
           ) : (
-            <table className="register">
-              <thead>
-                <tr>
-                  <th>Score</th>
-                  <th>Blocking key</th>
-                  <th>Left</th>
-                  <th>Right</th>
-                </tr>
-              </thead>
-              <tbody>
-                {relevant.slice(0, 14).map((candidate) => (
-                  <tr key={candidate.id}>
-                    <td className="text-[var(--color-brass-bright)]">{candidate.score.toFixed(3)}</td>
-                    <td>{candidate.blockingKey}</td>
-                    <td>{candidate.leftRecordId.slice(0, 14)}</td>
-                    <td>{candidate.rightRecordId.slice(0, 14)}</td>
+            <div className="registry">
+              <table className="register">
+                <thead>
+                  <tr>
+                    <th>Score</th>
+                    <th>Blocking key</th>
+                    <th>Left</th>
+                    <th>Right</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {relevant.slice(0, 14).map((candidate) => (
+                    <tr key={candidate.id}>
+                      <td className="text-[var(--color-brass-bright)]">{candidate.score.toFixed(3)}</td>
+                      <td>{candidate.blockingKey}</td>
+                      <td>{candidate.leftRecordId.slice(0, 14)}</td>
+                      <td>{candidate.rightRecordId.slice(0, 14)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
             Blocking is recall-only. A key that never fires is a match lost forever, so the keys overlap
@@ -216,32 +218,34 @@ export default async function MatchPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <Panel title="Records as they arrived">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Source</th>
-              <th>External id</th>
-              <th>Reference</th>
-              <th>Normalized</th>
-              <th>Amount</th>
-              <th>Fee</th>
-              <th>Value date</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td className="text-[var(--color-ivory)]">{row.kind.replace(/_/g, " ")}</td>
-                <td>{row.externalId}</td>
-                <td>{row.reference ?? "—"}</td>
-                <td className="text-[var(--color-brass-bright)]">{row.normalizedReference ?? "—"}</td>
-                <td>{inr(row.amountMinor)}</td>
-                <td>{row.feeMinor + row.taxMinor > 0 ? inr(row.feeMinor + row.taxMinor) : "—"}</td>
-                <td>{row.valueDate.toISOString().slice(0, 10)}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>External id</th>
+                <th>Reference</th>
+                <th>Normalized</th>
+                <th>Amount</th>
+                <th>Fee</th>
+                <th>Value date</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td className="text-[var(--color-ivory)]">{row.kind.replace(/_/g, " ")}</td>
+                  <td>{row.externalId}</td>
+                  <td>{row.reference ?? "—"}</td>
+                  <td className="text-[var(--color-brass-bright)]">{row.normalizedReference ?? "—"}</td>
+                  <td>{inr(row.amountMinor)}</td>
+                  <td>{row.feeMinor + row.taxMinor > 0 ? inr(row.feeMinor + row.taxMinor) : "—"}</td>
+                  <td>{row.valueDate.toISOString().slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
           The normalized column is what the matcher compared. The reference column is what actually arrived, kept
           verbatim so a normalization that is throwing away something real stays visible.

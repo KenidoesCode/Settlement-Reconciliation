@@ -56,7 +56,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       </div>
 
       <section className="panel">
-        <div className="grid gap-6 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="course-figures">
           <Figure value={String(run.recordCount)} caption="records" />
           <Figure value={String(run.candidateCount)} caption="candidate pairs" />
           <Figure value={String(run.matchedCount)} caption="match groups" tone="jade" />
@@ -72,7 +72,7 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
         </p>
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="course-panels">
         <Panel title="Thresholds used">
           <div className="space-y-2">
             {Object.entries(run.thresholds).map(([key, value]) => (
@@ -141,36 +141,38 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
               </span>
             ))}
         </div>
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Group</th>
-              <th>Records</th>
-              <th>Confidence</th>
-              <th>Decided by</th>
-              <th>Residual</th>
-              <th>Adjudicated</th>
-              <th>Rationale</th>
-            </tr>
-          </thead>
-          <tbody>
-            {matchRows.slice(0, 40).map((match, i) => (
-              <tr key={match.id} className="rise" style={{ animationDelay: Math.min(i, 16) * 22 + "ms" }}>
-                <td>
-                  <Link href={"/matches/" + match.id} className="underlink text-[var(--color-ivory)]">
-                    {match.id.slice(0, 14)}
-                  </Link>
-                </td>
-                <td>{match.recordIds.length}</td>
-                <td className="text-[var(--color-brass-bright)]">{match.confidence.toFixed(3)}</td>
-                <td>{match.decidedBy}</td>
-                <td>{inr(match.amountDeltaMinor)}</td>
-                <td>{match.adjudicated ? "yes" : "—"}</td>
-                <td className="max-w-[30rem]">{match.rationale[0]}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Group</th>
+                <th>Records</th>
+                <th>Confidence</th>
+                <th>Decided by</th>
+                <th>Residual</th>
+                <th>Adjudicated</th>
+                <th>Rationale</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {matchRows.slice(0, 40).map((match, i) => (
+                <tr key={match.id} className="rise" style={{ animationDelay: Math.min(i, 16) * 22 + "ms" }}>
+                  <td>
+                    <Link href={"/matches/" + match.id} className="underlink text-[var(--color-ivory)]">
+                      {match.id.slice(0, 14)}
+                    </Link>
+                  </td>
+                  <td>{match.recordIds.length}</td>
+                  <td className="text-[var(--color-brass-bright)]">{match.confidence.toFixed(3)}</td>
+                  <td>{match.decidedBy}</td>
+                  <td>{inr(match.amountDeltaMinor)}</td>
+                  <td>{match.adjudicated ? "yes" : "—"}</td>
+                  <td className="max-w-[30rem]">{match.rationale[0]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {matchRows.length > 40 && (
           <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
             Showing 40 of {matchRows.length} groups.
@@ -179,30 +181,32 @@ export default async function RunPage({ params }: { params: Promise<{ id: string
       </Panel>
 
       <Panel title="Candidate sample">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Score</th>
-              <th>Blocking key</th>
-              <th>Reference</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Counterparty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {candidateRows.slice(0, 20).map((candidate) => (
-              <tr key={candidate.id}>
-                <td className="text-[var(--color-brass-bright)]">{candidate.score.toFixed(3)}</td>
-                <td>{candidate.blockingKey}</td>
-                <td>{(candidate.features.reference ?? 0).toFixed(2)}</td>
-                <td>{(candidate.features.amount ?? 0).toFixed(2)}</td>
-                <td>{(candidate.features.date ?? 0).toFixed(2)}</td>
-                <td>{(candidate.features.counterparty ?? 0).toFixed(2)}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Blocking key</th>
+                <th>Reference</th>
+                <th>Amount</th>
+                <th>Date</th>
+                <th>Counterparty</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {candidateRows.slice(0, 20).map((candidate) => (
+                <tr key={candidate.id}>
+                  <td className="text-[var(--color-brass-bright)]">{candidate.score.toFixed(3)}</td>
+                  <td>{candidate.blockingKey}</td>
+                  <td>{(candidate.features.reference ?? 0).toFixed(2)}</td>
+                  <td>{(candidate.features.amount ?? 0).toFixed(2)}</td>
+                  <td>{(candidate.features.date ?? 0).toFixed(2)}</td>
+                  <td>{(candidate.features.counterparty ?? 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
           Candidates are persisted as a capped sample of 500 per run. The run generated{" "}
           {run.candidateCount.toLocaleString()}; storing them all would be tens of thousands of rows for a table

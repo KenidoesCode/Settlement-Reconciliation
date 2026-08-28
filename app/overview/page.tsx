@@ -75,7 +75,7 @@ export default async function OverviewPage() {
         </div>
 
         {metrics && (
-          <div className="mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="course-figures mt-7">
             <Figure value={pct(metrics.system.matchRate)} caption="records matched" tone="brass" />
             <Figure value={metrics.system.precision.toFixed(3)} caption="precision" tone="jade" />
             <Figure value={metrics.system.recall.toFixed(3)} caption="recall" />
@@ -104,36 +104,38 @@ export default async function OverviewPage() {
             </Link>
           }
         >
-          <table className="register">
-            <thead>
-              <tr>
-                <th>Strategy</th>
-                <th>Match rate</th>
-                <th>Precision</th>
-                <th>Recall</th>
-                <th>F1</th>
-                <th>False matches</th>
-                <th>Exceptions</th>
-                <th>Unresolved</th>
-                <th>Rec/sec</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[metrics.system, metrics.baseline].map((row) => (
-                <tr key={row.strategy}>
-                  <td className="text-[var(--color-ivory)]">{row.strategy}</td>
-                  <td>{pct(row.matchRate)}</td>
-                  <td>{row.precision.toFixed(3)}</td>
-                  <td>{row.recall.toFixed(3)}</td>
-                  <td className="text-[var(--color-brass-bright)]">{row.f1.toFixed(3)}</td>
-                  <td className={row.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>{row.falsePairs}</td>
-                  <td>{row.exceptionCount}</td>
-                  <td>{row.unresolvedCount}</td>
-                  <td>{Math.round(row.throughputRecordsPerSecond).toLocaleString()}</td>
+          <div className="registry">
+            <table className="register">
+              <thead>
+                <tr>
+                  <th>Strategy</th>
+                  <th>Match rate</th>
+                  <th>Precision</th>
+                  <th>Recall</th>
+                  <th>F1</th>
+                  <th>False matches</th>
+                  <th>Exceptions</th>
+                  <th>Unresolved</th>
+                  <th>Rec/sec</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[metrics.system, metrics.baseline].map((row) => (
+                  <tr key={row.strategy}>
+                    <td className="text-[var(--color-ivory)]">{row.strategy}</td>
+                    <td>{pct(row.matchRate)}</td>
+                    <td>{row.precision.toFixed(3)}</td>
+                    <td>{row.recall.toFixed(3)}</td>
+                    <td className="text-[var(--color-brass-bright)]">{row.f1.toFixed(3)}</td>
+                    <td className={row.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>{row.falsePairs}</td>
+                    <td>{row.exceptionCount}</td>
+                    <td>{row.unresolvedCount}</td>
+                    <td>{Math.round(row.throughputRecordsPerSecond).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
           <div className="mt-4">
             <p className="label mb-1.5">Where the baseline wins</p>
@@ -156,7 +158,7 @@ export default async function OverviewPage() {
         </Panel>
       )}
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="course-panels">
         <Panel title="Sources">
           <div className="space-y-2">
             {sourceRows.map((source) => (
@@ -214,34 +216,36 @@ export default async function OverviewPage() {
             </Link>
           }
         >
-          <table className="register">
-            <thead>
-              <tr>
-                <th>Records</th>
-                <th>Sources</th>
-                <th>Confidence</th>
-                <th>Decided by</th>
-                <th>Residual</th>
-                <th>Adjudicated</th>
-              </tr>
-            </thead>
-            <tbody>
-              {systemMatches.slice(0, 10).map((match, i) => (
-                <tr key={match.id} className="rise" style={{ animationDelay: Math.min(i, 10) * 30 + "ms" }}>
-                  <td>
-                    <Link href={"/matches/" + match.id} className="underlink text-[var(--color-ivory)]">
-                      {match.recordIds.length} records
-                    </Link>
-                  </td>
-                  <td>{match.recordIds.length}</td>
-                  <td className="text-[var(--color-brass-bright)]">{match.confidence.toFixed(3)}</td>
-                  <td>{match.decidedBy}</td>
-                  <td>{inr(match.amountDeltaMinor)}</td>
-                  <td>{match.adjudicated ? "yes" : "no"}</td>
+          <div className="registry">
+            <table className="register">
+              <thead>
+                <tr>
+                  <th>Records</th>
+                  <th>Sources</th>
+                  <th>Confidence</th>
+                  <th>Decided by</th>
+                  <th>Residual</th>
+                  <th>Adjudicated</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {systemMatches.slice(0, 10).map((match, i) => (
+                  <tr key={match.id} className="rise" style={{ animationDelay: Math.min(i, 10) * 30 + "ms" }}>
+                    <td>
+                      <Link href={"/matches/" + match.id} className="underlink text-[var(--color-ivory)]">
+                        {match.recordIds.length} records
+                      </Link>
+                    </td>
+                    <td>{match.recordIds.length}</td>
+                    <td className="text-[var(--color-brass-bright)]">{match.confidence.toFixed(3)}</td>
+                    <td>{match.decidedBy}</td>
+                    <td>{inr(match.amountDeltaMinor)}</td>
+                    <td>{match.adjudicated ? "yes" : "no"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
     </div>

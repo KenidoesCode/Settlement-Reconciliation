@@ -103,7 +103,7 @@ export default async function ExceptionsPage({
       </div>
 
       <section className="panel">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="course-figures">
           <Figure value={String(open.length)} caption="open exceptions" tone="brass" />
           <Figure value={inrCompact(totalAtRisk)} caption="money at risk" tone="carmine" />
           <Figure value={String(multiCandidate.length)} caption="genuinely ambiguous" />

@@ -125,7 +125,7 @@ export function ExceptionQueue({ items }: { items: QueueItem[] }) {
 
           <p className="mt-3 max-w-4xl text-sm text-[var(--color-ivory-dim)]">{item.explanation}</p>
 
-          <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.4fr]">
+          <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1.4fr]">
             <div>
               <p className="label mb-1.5">This record</p>
               {item.subject ? (

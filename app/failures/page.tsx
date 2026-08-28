@@ -53,7 +53,7 @@ export default async function FailuresPage() {
         </p>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="course-panels">
         <Panel>
           <Figure value={String(ambiguous.length)} caption="ambiguous, sent to a person" tone="brass" />
           <p className="mt-2 text-xs text-[var(--color-ivory-faint)]">
@@ -82,7 +82,7 @@ export default async function FailuresPage() {
         </Panel>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="course-panels">
         <Panel title="Malformed input, run live">
           <p className="mb-3 text-sm text-[var(--color-ivory-dim)]">
             A five-row CSV with four deliberate defects is parsed on every load of this page. Rows are rejected,
@@ -126,75 +126,77 @@ export default async function FailuresPage() {
       </div>
 
       <Panel title="What each failure does">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Failure</th>
-              <th>Where it is caught</th>
-              <th>What happens</th>
-              <th>What must never happen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[
-              [
-                "Ambiguous many-to-one",
-                "Policy engine, mutual-exclusivity test",
-                "Exception with every indistinguishable candidate attached",
-                "A confident pick between interchangeable records",
-              ],
-              [
-                "Missing counterpart",
-                "Policy engine, empty candidate set",
-                "MISSING_COUNTERPART exception with the amount at risk",
-                "Filing it as a low-confidence match",
-              ],
-              [
-                "Duplicate delivery",
-                "Ingestion, unique index on (source, external id)",
-                "Stored with duplicateOfId, excluded from matching",
-                "A second plausible match for money that moved once",
-              ],
-              [
-                "Malformed row",
-                "CSV parser, before any database write",
-                "Row rejected and reported with its line number",
-                "Coercing an unparseable amount to a number",
-              ],
-              [
-                "Oversized upload",
-                "Ingestion, before parsing",
-                "413 with the limit stated",
-                "Parsing first and checking the size afterwards",
-              ],
-              [
-                "Adjudicator unavailable",
-                "Adjudicator, on any failure or timeout",
-                "Falls back to the deterministic second opinion, marked fellBack",
-                "Failing the batch, or silently resolving",
-              ],
-              [
-                "Uploaded data with no ground truth",
-                "Evaluator",
-                "Refuses to compute precision and recall",
-                "Reporting metrics it cannot support",
-              ],
-              [
-                "Split settlement",
-                "Group merge pass, by summation",
-                "Parts merged into the whole when they add up",
-                "Merging on similarity rather than on arithmetic",
-              ],
-            ].map(([failure, where, what, never]) => (
-              <tr key={failure}>
-                <td className="text-[var(--color-ivory)]">{failure}</td>
-                <td>{where}</td>
-                <td className="text-[var(--color-jade)]">{what}</td>
-                <td className="text-[var(--color-carmine)]">{never}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Failure</th>
+                <th>Where it is caught</th>
+                <th>What happens</th>
+                <th>What must never happen</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[
+                [
+                  "Ambiguous many-to-one",
+                  "Policy engine, mutual-exclusivity test",
+                  "Exception with every indistinguishable candidate attached",
+                  "A confident pick between interchangeable records",
+                ],
+                [
+                  "Missing counterpart",
+                  "Policy engine, empty candidate set",
+                  "MISSING_COUNTERPART exception with the amount at risk",
+                  "Filing it as a low-confidence match",
+                ],
+                [
+                  "Duplicate delivery",
+                  "Ingestion, unique index on (source, external id)",
+                  "Stored with duplicateOfId, excluded from matching",
+                  "A second plausible match for money that moved once",
+                ],
+                [
+                  "Malformed row",
+                  "CSV parser, before any database write",
+                  "Row rejected and reported with its line number",
+                  "Coercing an unparseable amount to a number",
+                ],
+                [
+                  "Oversized upload",
+                  "Ingestion, before parsing",
+                  "413 with the limit stated",
+                  "Parsing first and checking the size afterwards",
+                ],
+                [
+                  "Adjudicator unavailable",
+                  "Adjudicator, on any failure or timeout",
+                  "Falls back to the deterministic second opinion, marked fellBack",
+                  "Failing the batch, or silently resolving",
+                ],
+                [
+                  "Uploaded data with no ground truth",
+                  "Evaluator",
+                  "Refuses to compute precision and recall",
+                  "Reporting metrics it cannot support",
+                ],
+                [
+                  "Split settlement",
+                  "Group merge pass, by summation",
+                  "Parts merged into the whole when they add up",
+                  "Merging on similarity rather than on arithmetic",
+                ],
+              ].map(([failure, where, what, never]) => (
+                <tr key={failure}>
+                  <td className="text-[var(--color-ivory)]">{failure}</td>
+                  <td>{where}</td>
+                  <td className="text-[var(--color-jade)]">{what}</td>
+                  <td className="text-[var(--color-carmine)]">{never}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
     </div>
   );

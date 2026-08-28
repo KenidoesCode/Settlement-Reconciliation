@@ -31,44 +31,46 @@ export default async function RunsPage() {
       </Panel>
 
       <Panel title="History">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Run</th>
-              <th>Strategy</th>
-              <th>Adjudicator</th>
-              <th>Records</th>
-              <th>Candidates</th>
-              <th>Matched</th>
-              <th>Exceptions</th>
-              <th>Unresolved</th>
-              <th>ms</th>
-              <th>Rec/sec</th>
-              <th>Resolve</th>
-            </tr>
-          </thead>
-          <tbody>
-            {runs.map((run, i) => (
-              <tr key={run.id} className="rise" style={{ animationDelay: Math.min(i, 14) * 25 + "ms" }}>
-                <td>
-                  <Link href={"/runs/" + run.id} className="underlink text-[var(--color-ivory)]">
-                    {run.label}
-                  </Link>
-                </td>
-                <td>{run.strategy}</td>
-                <td>{run.adjudicator}</td>
-                <td>{run.recordCount}</td>
-                <td>{run.candidateCount}</td>
-                <td className="text-[var(--color-jade)]">{run.matchedCount}</td>
-                <td className="text-[var(--color-amber)]">{run.exceptionCount}</td>
-                <td>{run.unresolvedCount}</td>
-                <td>{run.durationMs}</td>
-                <td>{Math.round(run.recordsPerSecond).toLocaleString()}</td>
-                <td>{(run.thresholds.resolve ?? 0).toFixed(2)}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Strategy</th>
+                <th>Adjudicator</th>
+                <th>Records</th>
+                <th>Candidates</th>
+                <th>Matched</th>
+                <th>Exceptions</th>
+                <th>Unresolved</th>
+                <th>ms</th>
+                <th>Rec/sec</th>
+                <th>Resolve</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {runs.map((run, i) => (
+                <tr key={run.id} className="rise" style={{ animationDelay: Math.min(i, 14) * 25 + "ms" }}>
+                  <td>
+                    <Link href={"/runs/" + run.id} className="underlink text-[var(--color-ivory)]">
+                      {run.label}
+                    </Link>
+                  </td>
+                  <td>{run.strategy}</td>
+                  <td>{run.adjudicator}</td>
+                  <td>{run.recordCount}</td>
+                  <td>{run.candidateCount}</td>
+                  <td className="text-[var(--color-jade)]">{run.matchedCount}</td>
+                  <td className="text-[var(--color-amber)]">{run.exceptionCount}</td>
+                  <td>{run.unresolvedCount}</td>
+                  <td>{run.durationMs}</td>
+                  <td>{Math.round(run.recordsPerSecond).toLocaleString()}</td>
+                  <td>{(run.thresholds.resolve ?? 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Panel>
     </div>
   );

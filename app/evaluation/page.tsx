@@ -70,7 +70,7 @@ export default async function EvaluationPage() {
         </div>
       </Panel>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="course-panels">
         <Panel>
           <Figure value={system.precision.toFixed(3)} caption="precision" tone="jade" />
           <p className="mt-2 text-xs text-[var(--color-ivory-faint)]">
@@ -107,40 +107,42 @@ export default async function EvaluationPage() {
       </div>
 
       <Panel title="System against baseline">
-        <table className="register">
-          <thead>
-            <tr>
-              <th>Strategy</th>
-              <th>Match rate</th>
-              <th>Precision</th>
-              <th>Recall</th>
-              <th>F1</th>
-              <th>True</th>
-              <th>False</th>
-              <th>Missed</th>
-              <th>Correct exceptions</th>
-              <th>Unresolved</th>
-              <th>Rec/sec</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[system, baseline].map((row) => (
-              <tr key={row.strategy}>
-                <td className="text-[var(--color-ivory)]">{row.strategy}</td>
-                <td>{pct(row.matchRate)}</td>
-                <td>{row.precision.toFixed(3)}</td>
-                <td>{row.recall.toFixed(3)}</td>
-                <td className="text-[var(--color-brass-bright)]">{row.f1.toFixed(3)}</td>
-                <td className="text-[var(--color-jade)]">{row.truePairs}</td>
-                <td className={row.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>{row.falsePairs}</td>
-                <td>{row.missedPairs}</td>
-                <td>{row.exceptionPairs}</td>
-                <td>{row.unresolvedCount}</td>
-                <td>{Math.round(row.throughputRecordsPerSecond).toLocaleString()}</td>
+        <div className="registry">
+          <table className="register">
+            <thead>
+              <tr>
+                <th>Strategy</th>
+                <th>Match rate</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1</th>
+                <th>True</th>
+                <th>False</th>
+                <th>Missed</th>
+                <th>Correct exceptions</th>
+                <th>Unresolved</th>
+                <th>Rec/sec</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[system, baseline].map((row) => (
+                <tr key={row.strategy}>
+                  <td className="text-[var(--color-ivory)]">{row.strategy}</td>
+                  <td>{pct(row.matchRate)}</td>
+                  <td>{row.precision.toFixed(3)}</td>
+                  <td>{row.recall.toFixed(3)}</td>
+                  <td className="text-[var(--color-brass-bright)]">{row.f1.toFixed(3)}</td>
+                  <td className="text-[var(--color-jade)]">{row.truePairs}</td>
+                  <td className={row.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>{row.falsePairs}</td>
+                  <td>{row.missedPairs}</td>
+                  <td>{row.exceptionPairs}</td>
+                  <td>{row.unresolvedCount}</td>
+                  <td>{Math.round(row.throughputRecordsPerSecond).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
         <div className="mt-4">
           <p className="label mb-1.5">Where the baseline wins</p>
@@ -162,38 +164,40 @@ export default async function EvaluationPage() {
         </div>
       </Panel>
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="course-panels">
         <Panel title="Per defect shape">
-          <table className="register">
-            <thead>
-              <tr>
-                <th>Shape</th>
-                <th>Truth pairs</th>
-                <th>Recovered</th>
-                <th>False</th>
-                <th>To a person</th>
-                <th>Lost</th>
-                <th>Recall</th>
-              </tr>
-            </thead>
-            <tbody>
-              {system.perShape.map((shape) => (
-                <tr key={shape.shape}>
-                  <td className="text-[var(--color-ivory)]">{shape.shape}</td>
-                  <td>{shape.truthPairs}</td>
-                  <td className="text-[var(--color-jade)]">{shape.truePairs}</td>
-                  <td className={shape.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>
-                    {shape.falsePairs}
-                  </td>
-                  <td className="text-[var(--color-amber)]">{shape.exceptionPairs}</td>
-                  <td className={shape.missedPairs > 0 ? "text-[var(--color-carmine)]" : ""}>
-                    {shape.missedPairs}
-                  </td>
-                  <td>{shape.recall.toFixed(3)}</td>
+          <div className="registry">
+            <table className="register">
+              <thead>
+                <tr>
+                  <th>Shape</th>
+                  <th>Truth pairs</th>
+                  <th>Recovered</th>
+                  <th>False</th>
+                  <th>To a person</th>
+                  <th>Lost</th>
+                  <th>Recall</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {system.perShape.map((shape) => (
+                  <tr key={shape.shape}>
+                    <td className="text-[var(--color-ivory)]">{shape.shape}</td>
+                    <td>{shape.truthPairs}</td>
+                    <td className="text-[var(--color-jade)]">{shape.truePairs}</td>
+                    <td className={shape.falsePairs > 0 ? "text-[var(--color-carmine)]" : ""}>
+                      {shape.falsePairs}
+                    </td>
+                    <td className="text-[var(--color-amber)]">{shape.exceptionPairs}</td>
+                    <td className={shape.missedPairs > 0 ? "text-[var(--color-carmine)]" : ""}>
+                      {shape.missedPairs}
+                    </td>
+                    <td>{shape.recall.toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
             Reported per shape so a good aggregate cannot hide a defect class the engine never handles. The
             many-to-one row is supposed to show zero recovered and zero false — every one of those cases should
@@ -203,28 +207,30 @@ export default async function EvaluationPage() {
 
         <div className="space-y-5">
           <Panel title="Confidence calibration">
-            <table className="register">
-              <thead>
-                <tr>
-                  <th>Confidence band</th>
-                  <th>Pairs</th>
-                  <th>Actually correct</th>
-                  <th>Observed precision</th>
-                </tr>
-              </thead>
-              <tbody>
-                {system.calibrationBuckets.map((bucket) => (
-                  <tr key={bucket.bucket}>
-                    <td>{bucket.bucket}</td>
-                    <td>{bucket.pairs}</td>
-                    <td>{bucket.truePairs}</td>
-                    <td className="text-[var(--color-brass-bright)]">
-                      {bucket.observedPrecision.toFixed(3)}
-                    </td>
+            <div className="registry">
+              <table className="register">
+                <thead>
+                  <tr>
+                    <th>Confidence band</th>
+                    <th>Pairs</th>
+                    <th>Actually correct</th>
+                    <th>Observed precision</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {system.calibrationBuckets.map((bucket) => (
+                    <tr key={bucket.bucket}>
+                      <td>{bucket.bucket}</td>
+                      <td>{bucket.pairs}</td>
+                      <td>{bucket.truePairs}</td>
+                      <td className="text-[var(--color-brass-bright)]">
+                        {bucket.observedPrecision.toFixed(3)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <p className="mt-3 text-xs text-[var(--color-ivory-faint)]">
               Mean confidence on correct pairs {system.meanConfidenceTrue.toFixed(3)}, on wrong pairs{" "}
               {system.meanConfidenceFalse.toFixed(3)}. If those two are close, the confidence number is not

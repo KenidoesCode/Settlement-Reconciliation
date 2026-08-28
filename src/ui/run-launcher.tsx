@@ -124,7 +124,7 @@ export function RunLauncher() {
       </p>
 
       {result && (
-        <div className="rise grid gap-4 border-t border-[var(--color-rule)] pt-4 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="rise course-figures border-t border-[var(--color-rule)] pt-4">
           <Stat label="records" value={String(result.recordCount)} />
           <Stat label="candidates" value={String(result.candidateCount)} />
           <Stat label="matches" value={String(result.matchedCount)} tone="jade" />

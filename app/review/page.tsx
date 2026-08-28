@@ -37,7 +37,7 @@ export default async function ReviewPage() {
       </div>
 
       <section className="panel">
-        <div className="grid gap-6 sm:grid-cols-4">
+        <div className="course-figures">
           <Figure value={String(reviews.length)} caption="reviews" />
           <Figure value={String(approved.length)} caption="approved" tone="jade" />
           <Figure value={String(escalated.length)} caption="escalated" tone="brass" />
@@ -55,49 +55,51 @@ export default async function ReviewPage() {
             to work through it.
           </p>
         ) : (
-          <table className="register">
-            <thead>
-              <tr>
-                <th>Outcome</th>
-                <th>Reviewer</th>
-                <th>Exception kind</th>
-                <th>Engine confidence</th>
-                <th>Candidates offered</th>
-                <th>Amount</th>
-                <th>Note</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.map((review, i) => {
-                const exception = byId.get(review.exceptionId);
-                return (
-                  <tr key={review.id} className="rise" style={{ animationDelay: Math.min(i, 14) * 25 + "ms" }}>
-                    <td
-                      className={
-                        review.outcome === "APPROVED"
-                          ? "text-[var(--color-jade)]"
-                          : review.outcome === "REJECTED"
-                            ? "text-[var(--color-carmine)]"
-                            : "text-[var(--color-amber)]"
-                      }
-                    >
-                      {review.outcome}
-                    </td>
-                    <td>{review.reviewer}</td>
-                    <td>{exception?.kind.replace(/_/g, " ") ?? "—"}</td>
-                    <td>{exception?.confidence.toFixed(3) ?? "—"}</td>
-                    <td className={(exception?.recommendedRecordIds.length ?? 0) > 1 ? "text-[var(--color-amber)]" : ""}>
-                      {exception?.recommendedRecordIds.length ?? 0}
-                    </td>
-                    <td>{exception ? inr(exception.amountAtRiskMinor) : "—"}</td>
-                    <td className="max-w-[24rem]">{review.note || "—"}</td>
-                    <td>{review.createdAt.toISOString().slice(0, 16).replace("T", " ")}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="registry">
+            <table className="register">
+              <thead>
+                <tr>
+                  <th>Outcome</th>
+                  <th>Reviewer</th>
+                  <th>Exception kind</th>
+                  <th>Engine confidence</th>
+                  <th>Candidates offered</th>
+                  <th>Amount</th>
+                  <th>Note</th>
+                  <th>When</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reviews.map((review, i) => {
+                  const exception = byId.get(review.exceptionId);
+                  return (
+                    <tr key={review.id} className="rise" style={{ animationDelay: Math.min(i, 14) * 25 + "ms" }}>
+                      <td
+                        className={
+                          review.outcome === "APPROVED"
+                            ? "text-[var(--color-jade)]"
+                            : review.outcome === "REJECTED"
+                              ? "text-[var(--color-carmine)]"
+                              : "text-[var(--color-amber)]"
+                        }
+                      >
+                        {review.outcome}
+                      </td>
+                      <td>{review.reviewer}</td>
+                      <td>{exception?.kind.replace(/_/g, " ") ?? "—"}</td>
+                      <td>{exception?.confidence.toFixed(3) ?? "—"}</td>
+                      <td className={(exception?.recommendedRecordIds.length ?? 0) > 1 ? "text-[var(--color-amber)]" : ""}>
+                        {exception?.recommendedRecordIds.length ?? 0}
+                      </td>
+                      <td>{exception ? inr(exception.amountAtRiskMinor) : "—"}</td>
+                      <td className="max-w-[24rem]">{review.note || "—"}</td>
+                      <td>{review.createdAt.toISOString().slice(0, 16).replace("T", " ")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
 

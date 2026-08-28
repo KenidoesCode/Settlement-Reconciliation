@@ -356,3 +356,241 @@ textarea,
 button {
   font-family: inherit;
 }
+
+/* ==========================================================================
+   RESPONSIVE LAYER
+   ==========================================================================
+   Written last and deliberately OUTSIDE any @layer, so it wins over Tailwind's
+   utilities layer. That is not a trick, it is the whole mechanism: a `px-7` on
+   <main> sits in @layer utilities and would otherwise beat a layered .page
+   class no matter how specific the selector was.
+
+   The approach is fluid first, breakpoints second. clamp() and auto-fit make
+   the layout a continuous function of the viewport, so it is considered at
+   every width rather than correct at five of them. There are exactly two
+   breakpoints below, and both exist because something has to change KIND
+   rather than degree: the frieze becomes a scrolling strip, and the tie-line
+   ledger turns its axis through ninety degrees.
+   ========================================================================== */
+
+/* --- 1. The document does not scroll sideways. Designated containers do. --- */
+
+html,
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+/* --- 2. Fluid body text. The floor is today's 15px; it only grows. -------- */
+
+body {
+  font-size: clamp(0.9375rem, 0.9rem + 0.18vw, 1rem);
+}
+
+/* --- 3. The page gutter. -------------------------------------------------
+   <main> carries this class and nothing else: the px-7 / max-w utilities were
+   removed from the element rather than overridden, so there is one definition
+   of the gutter. The frieze takes the same padding-inline, so the header and
+   the body align down the same edge at every width. */
+
+.page {
+  width: 100%;
+  max-width: 1560px;
+  margin-inline: auto;
+  padding-inline: clamp(0.875rem, 4vw, 1.75rem);
+  padding-block: clamp(1.25rem, 3vw, 2rem);
+}
+
+.frieze-inner {
+  padding-block: clamp(0.55rem, 1.6vw, 0.7rem);
+  padding-inline: clamp(0.875rem, 4vw, 1.75rem);
+}
+
+/* --- 4. Fluid display type. ---------------------------------------------- */
+
+.figure {
+  font-size: clamp(1.35rem, 1.05rem + 2.2vw, 1.9rem);
+}
+
+h1.display {
+  font-size: clamp(1.25rem, 1.05rem + 1vw, 1.5rem);
+}
+
+/* --- 5. Fluid panel padding. --------------------------------------------- */
+
+.panel {
+  padding: clamp(0.85rem, 3vw, 1.15rem) clamp(0.85rem, 3vw, 1.3rem);
+}
+
+.tie-side {
+  padding: 0.55rem clamp(0.5rem, 2.5vw, 0.85rem);
+}
+
+/* --- 6. Courses: card grids as a continuous function of the width. --------
+   A course is a horizontal band of masonry, which is what these are. auto-fit
+   with min(100%, …) rather than a breakpoint ladder, so a row of five figures
+   goes 5 -> 4 -> 3 -> 2 -> 1 as the viewport narrows instead of jumping from
+   five straight to one. The min(100%, …) is load-bearing: without it a single
+   card is wider than a 360px viewport and pushes the page sideways. */
+
+.course-figures,
+.course-rows,
+.course-panels {
+  display: grid;
+}
+
+.course-figures {
+  gap: clamp(0.9rem, 2.5vw, 1.5rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+}
+
+.course-rows {
+  gap: clamp(0.8rem, 2vw, 1rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+}
+
+.course-panels {
+  gap: clamp(0.9rem, 2.2vw, 1.25rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+}
+
+/* --- 7. Registers scroll inside their own container, never the page. ------
+   A reconciliation table is eleven columns of figures and there is no honest
+   way to reflow it: dropping columns on a phone would hide the exception count
+   sitting next to the precision, which is the entire argument of the page. So
+   it keeps its width and scrolls, and the document does not move. */
+
+.registry {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.registry .register {
+  min-width: 36rem;
+}
+
+/* The brandmark carried its size and tracking as Tailwind arbitrary values.
+   They live here now so the narrow-width version has something to override. */
+
+.frieze-brandmark {
+  font-size: 0.8125rem;
+  letter-spacing: 0.3em;
+}
+
+/* --- 8. The frieze below 720px. ------------------------------------------
+   Ten labels wrapped onto four lines is a header that eats the first screen.
+   The band keeps its single line and scrolls, which is what an entablature
+   does anyway -- you walk along it. The scrollbar is hidden because a visible
+   one inside a 30px band is louder than the type it sits under. */
+
+@media (max-width: 719px) {
+  .frieze-inner {
+    align-items: center;
+    gap: 0.3rem 0.75rem;
+  }
+
+  /* Tighter tracking, not a shorter name. Deco letterspacing is the point of
+     the brandmark, so it is compressed rather than abandoned, and the two
+     items are sized to sit on one line at 360px -- and to wrap harmlessly
+     rather than overflow if the fallback face is wider than assumed. */
+  .frieze-brandmark {
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+  }
+
+  .frieze-note {
+    order: 2;
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+  }
+
+  .frieze-nav {
+    order: 3;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .frieze-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The chevron course under the frieze is ornament and it costs a repaint
+     across the full width on a device that has none to spare. */
+  .frieze::after {
+    display: none;
+  }
+}
+
+/* --- 9. THE TIE-LINE LEDGER BELOW 700px. ---------------------------------
+   1fr 84px 1fr is two unreadable columns and a stripe on a phone: at 360px
+   each side gets about 110px, which is narrower than a single UTR.
+
+   So the axis turns through ninety degrees. Books stack first, ruled and set
+   flush left; the axis becomes a horizontal brass course carrying the same
+   stepped chevron the frieze uses, with the residual printed on it; the bank
+   side stacks below, ruled and set flush right. The two sides stay mirror
+   images of each other and the axis still sits between them, which is the
+   whole reason the layout is shaped this way -- it is only that a phone reads
+   down the page rather than across it.
+
+   The arcs are hidden rather than redrawn. They are positioned on a fixed
+   96px rhythm that only exists while the two sides are side by side; drawn
+   into a horizontal band they would be lines to nowhere. The chevron course
+   carries the meaning instead. */
+
+@media (max-width: 699px) {
+  .tie {
+    grid-template-columns: 1fr;
+  }
+
+  .tie-axis {
+    border-left: 0;
+    border-right: 0;
+    border-top: 1px solid var(--color-brass-dim);
+    border-bottom: 1px solid var(--color-brass-dim);
+    margin-block: 0.6rem;
+    padding-block: 0.5rem;
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(201, 162, 39, 0.5) 0 10px,
+        transparent 10px 14px,
+        rgba(201, 162, 39, 0.5) 14px 18px,
+        transparent 18px 30px
+      )
+      0 0 / 100% 3px no-repeat;
+  }
+
+  .tie-arc {
+    display: none;
+  }
+
+  .tie-residual {
+    position: static;
+    padding-top: 0.35rem;
+  }
+
+  /* Books rule left and read left; bank rules right and reads right. That is
+     the two-column distinction, kept, with the page turned upright. */
+  .tie > :first-child .tie-side {
+    border-left: 2px solid var(--color-brass-dim);
+  }
+
+  .tie > :last-child .tie-side {
+    border-right: 2px solid var(--color-brass-dim);
+  }
+}
+
+/* --- 10. Above 700px the axis itself is fluid, so the 700-1050px band does
+   not spend 84px of a narrow viewport on a stripe. ------------------------- */
+
+@media (min-width: 700px) {
+  .tie {
+    grid-template-columns: 1fr clamp(56px, 8vw, 84px) 1fr;
+  }
+}

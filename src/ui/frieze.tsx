@@ -29,11 +29,11 @@ export function Frieze({ pendingExceptions }: { pendingExceptions: number }) {
     <header className="frieze">
       <div className="frieze-inner">
         <Link href="/overview" className="mr-3 shrink-0">
-          <span className="display text-[0.8125rem] tracking-[0.3em] text-[var(--color-brass-bright)]">
+          <span className="display frieze-brandmark text-[var(--color-brass-bright)]">
             SETTLEMENT RECONCILIATION
           </span>
         </Link>
-        <nav aria-label="Sections" className="flex flex-wrap gap-x-6 gap-y-1">
+        <nav aria-label="Sections" className="frieze-nav flex flex-wrap gap-x-6 gap-y-1">
           {LINKS.map((link) => (
             <Link
               key={link.href}
@@ -48,7 +48,7 @@ export function Frieze({ pendingExceptions }: { pendingExceptions: number }) {
             </Link>
           ))}
         </nav>
-        <span className="frieze-link ml-auto text-[var(--color-carmine)]">Synthetic data</span>
+        <span className="frieze-link frieze-note ml-auto text-[var(--color-carmine)]">Synthetic data</span>
       </div>
     </header>
   );
