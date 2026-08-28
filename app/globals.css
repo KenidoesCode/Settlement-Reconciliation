@@ -679,10 +679,28 @@ h1.display {
   .rail nav {
     flex-wrap: nowrap;
   }
+}
 
+/* ---------------------------------------------------------------------------
+   MICRO-TYPE FLOOR -- phones AND tablets.
+
+   This lived inside the phone-width block and therefore stopped at 767px, one
+   pixel short of tablet portrait. Rendering 89 pages at 320, 390 and 768 found
+   87 of the 93 remaining problems sitting at exactly 768px: every site, every
+   page, the 9px labels back at 9px. A breakpoint that ends where the most
+   common tablet width begins is not a breakpoint.
+
+   Nav layout stays at its own narrower breakpoint above -- a nav that fits on
+   one line at 768px should not be turned into a scrolling strip. Only type is
+   floored here.
+
+   Deliberately outside @layer: unlayered rules beat layered ones regardless of
+   source order, and these must win.
+   --------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
   /* Micro-type floor. These classes render at 9px on a laptop by design; at
-     390px that is not readable text. Eleven pixels is the floor, applied only
-     here -- the desktop sizes above are untouched. */
+     390px -- and at 768px -- that is not readable text. Eleven pixels is the
+     floor; the desktop sizes above 1023px are untouched. */
   .label,
   .lbl,
   .caption,
@@ -709,7 +727,7 @@ h1.display {
      !important is here for one reason and it is the documented one: these
      compete with Tailwind utilities such as text-[10px] and text-[0.625rem],
      which sit in the utilities layer and beat any ordinary rule. The scope is a
-     single max-width media query, so nothing above 767px is affected. */
+     single max-width media query, so nothing above 1023px is affected. */
   .mono, .label,
   .frieze-note, th,
   [class*="text-[10px]"],
