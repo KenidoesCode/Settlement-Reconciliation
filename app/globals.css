@@ -699,4 +699,22 @@ h1.display {
     font-size: 0.6875rem;
     letter-spacing: 0.1em;
   }
+
+  /* Per-project micro-labels, and the arbitrary Tailwind text sizes.
+
+     Found by rendering each site at 390px and listing every element under 11px
+     -- 261 of them on the worst page. A stylesheet cannot tell you this; only
+     a browser can.
+
+     !important is here for one reason and it is the documented one: these
+     compete with Tailwind utilities such as text-[10px] and text-[0.625rem],
+     which sit in the utilities layer and beat any ordinary rule. The scope is a
+     single max-width media query, so nothing above 767px is affected. */
+  .mono, .label,
+  [class*="text-[10px]"],
+  [class*="text-[0.625rem]"],
+  [class*="text-[0.5625rem]"],
+  [class*="text-[9px]"] {
+    font-size: 0.6875rem !important;
+  }
 }
