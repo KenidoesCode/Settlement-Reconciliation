@@ -1,303 +1,1253 @@
+<div align="center">
+
 # Settlement Reconciliation
 
-Multi-source reconciliation across payments, orders, settlements, bank statements
-and invoices. Blocking, fuzzy scoring, and a policy engine whose most important
-job is refusing to decide the cases it cannot actually tell apart.
+**Multi-source payment reconciliation with deterministic matching, bounded AI adjudication, and an exception-first policy engine.**
 
-**A settlement is never the order amount.** It is the order minus a gateway fee
-minus GST on that fee. The bank narration wraps the reference in `NEFT/…/HDFC`
-or truncates it to a field width. The credit lands three days late, or eleven.
-An exact join finds none of this, which is why reconciliation is still done by
-hand in most finance teams.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-App%20Router-000000?logo=nextdotjs\&logoColor=white)](https://nextjs.org/)
+[![Vitest](https://img.shields.io/badge/tests-Vitest-6E9F18?logo=vitest\&logoColor=white)](https://vitest.dev/)
+[![Database](https://img.shields.io/badge/database-PGlite%20%2F%20PostgreSQL-336791?logo=postgresql\&logoColor=white)](https://www.postgresql.org/)
+[![Data](https://img.shields.io/badge/data-synthetic%20%2F%20Razorpay--shaped-0B6E4F)](#data)
+[![Security](https://img.shields.io/badge/design-audit%20%2B%20failure--first-8B5CF6)](#failure-engineering)
 
----
+**728 records · 5 sources · 1,098 held-out truth pairs · 0 false matches**
 
-## Results
+</div>
 
-728 records across 5 sources, 1,098 ground-truth pairs, measured against
-held-out truth the matcher never sees.
+> **Core principle:** when the system cannot distinguish two financial records, it must refuse to guess.
 
-| | Exact-join baseline | Fuzzy + adjudicator |
-| --- | --- | --- |
-| Match rate | 84.5% | **89.0%** |
-| Precision | 1.000 | **1.000** |
-| Recall | 0.596 | **0.934** |
-| F1 | 0.747 | **0.966** |
-| False matches | 0 | **0** |
-| Missed pairs | 432 | **30** |
-| Exceptions raised | 113 | 78 |
-| Unresolved records | 101 | **3** |
-| Throughput | ~8,000 rec/sec | ~7,800 rec/sec |
-
-Per defect shape:
-
-| Shape | Truth pairs | Recovered | False | To a person | Lost | Recall |
-| --- | --- | --- | --- | --- | --- | --- |
-| clean | 360 | 360 | 0 | 0 | 0 | 1.000 |
-| fee-deducted | 340 | 340 | 0 | 0 | 0 | 1.000 |
-| split-settlement | 210 | 168 | 0 | 12 | **30** | **0.800** |
-| timing-lag | 66 | 66 | 0 | 0 | 0 | 1.000 |
-| reference-typo | 60 | 60 | 0 | 0 | 0 | 1.000 |
-| missing-counterpart | 8 | 8 | 0 | 0 | 0 | 1.000 |
-| duplicate | 24 | 24 | 0 | 0 | 0 | 1.000 |
-| many-to-one | 30 | **0** | **0** | **30** | 0 | **0.000** |
-
-### Reading these honestly
-
-**The many-to-one row of 0.000 recall is the result this system is proudest of.**
-Three identical credits from one merchant on one day, references mangled past
-recognition. Nothing distinguishes them. Every one of those 30 pairs goes to a
-person, none is resolved, and none is silently lost. A version of this engine
-that scored recall there would be guessing, and a guess that happens to be right
-on this corpus will be wrong on the next one.
-
-**The split-settlement recall of 0.800 is the real weakness.** 30 truth pairs
-lost outright — neither matched nor queued. The merge pass recovers a split when
-the parts sum to the whole and share a reference; it does not recover one where
-the reference was also mangled, and those cases fall out of the ledger without
-anyone being told. That is the worst failure mode in this product and it is the
-first thing to fix.
-
-**Precision of 1.000 with zero false matches is partly fitted to this corpus.**
-The rule that got it there — that two same-length references differing only in
-digit positions are different serial numbers, not one mistyped — exploits the
-fact that this generator produces references as a shared prefix plus a sequence.
-Real ledgers use other conventions. On one of them that rule would need
-re-deriving, and precision would very likely not be 1.000. It is stated at the
-function, not just here.
-
-**"Where the baseline wins: nothing on this run" is a claim about this corpus.**
-On a ledger with clean references and no fee deductions, an exact join would tie
-on everything and cost far less to operate. The comparison code populates the
-regression list from the same pass that computes the wins, so a run where the
-baseline is better cannot report the wins without the losses beside them.
-
-**Ground truth exists only for generated records.** Anything uploaded through
-`/api/ingest` has no truth group, and the evaluator refuses to compute precision
-and recall over it rather than reporting numbers it cannot support.
+<p align="center">
+  <a href="#why-this-exists">Why</a> ·
+  <a href="#results">Results</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#the-engine">Engine</a> ·
+  <a href="#where-ai-sits--and-where-it-does-not">AI boundary</a> ·
+  <a href="#failure-engineering">Failures</a> ·
+  <a href="#audit">Audit</a> ·
+  <a href="#running-it">Run locally</a> ·
+  <a href="#api">API</a>
+</p>
 
 ---
 
-## The engine
+# Why This Exists
 
-Three stages, and the boundaries between them are the design.
+Settlement reconciliation sounds simple:
 
-```
-  ingest ─→ normalize ─→ BLOCKING ─→ SCORING ─→ [adjudicator] ─→ POLICY ─→ group
-                         recall       features    ambiguous band   decides   union-find
-                         only         only        only                       + split merge
+> **Find the transaction that corresponds to this bank or settlement record.**
+
+In real payment systems, it is not.
+
+A single financial event can appear across:
+
+* orders
+* payments
+* settlements
+* bank statements
+* invoices
+
+And the records rarely agree perfectly.
+
+A settlement is **not necessarily the order amount**.
+
+It can be:
+
+```text
+Order amount
+    − gateway fee
+    − GST on fee
+    = settlement amount
 ```
 
-**Blocking** is recall-only. Keys are deliberately loose and overlapping —
-reference, reference prefix (for truncation), two adjacent amount buckets,
-counterparty-and-date — because a missed block is a missed match forever.
-Precision is left entirely to scoring. 728 records produce ~2,000 candidate
-pairs instead of 264,628.
+Bank narrations may wrap references in formats such as:
 
-**Scoring** produces five feature values and a weighted total. Nothing decides.
-Two hard gates rather than features: a currency mismatch scores zero (two amounts
-in different currencies are incomparable, not similar), and **two records from
-the same source score zero** — reconciliation means finding a counterpart in a
-*different* system, and an earlier version that scored same-source pairs had
-three orders for the same amount matching *each other* on reference similarity
-alone.
+```text
+NEFT/.../HDFC
+```
 
-**Amount agreement is not `|a - b| < ε`.** A gap explainable as a fee plus 18%
-GST scores 0.92; the score decays to zero at three times the tolerance. That
-single feature is most of the difference between 0.596 and 0.934 recall.
+References may be:
 
-**The policy engine** is the only place a decision is made, and its central rule
-was rewritten after measuring:
+* truncated
+* case-folded
+* partially corrupted
+* separated differently
+* delayed
+* affected by OCR-like errors
 
-> Ambiguity is **mutual exclusivity**, not similarity. Two candidates are
-> mutually exclusive when they come from the **same source** and **each one alone
-> accounts for the subject's amount**.
+A credit may also arrive days after the original payment.
 
-The first version treated "several candidates score about the same" as ambiguity
-and scored **0.000 recall on the clean shape** — the easiest shape in the corpus.
-In a four-record reconciliation every record has three near-perfect candidates,
-and they are not alternatives; they are the other three parts of the same event.
-Two bank lines for 40% and 60% of an order are complementary too — they *sum*.
-Two bank lines each for the full amount are alternatives, and picking is
-guessing. That test separates the trap from the clean case and from the split
-case, which similarity alone cannot do.
+An exact database join therefore misses legitimate relationships.
 
-**Matches are groups, not pairs.** Pairwise decisions are unioned into connected
-components, so an order, a payment, a settlement and a bank line are one
-reconciliation rather than three pairings.
+But a fuzzy matcher creates a different danger:
+
+> **Two financial records can look similar without being the same financial event.**
+
+This project is designed around that tension.
 
 ---
 
-## Where AI sits, and where it does not
+# What It Solves
 
-Deterministic code owns normalization, blocking, scoring, thresholds and every
-decision. The adjudicator is called **only** for candidates in the band between
-the review floor and the resolve threshold, and it can do exactly two things:
-nudge a confidence within ±0.12 and supply a reason.
+A reconciliation engine has two competing responsibilities:
 
-It cannot:
+1. **Recover as many true matches as possible.**
+2. **Never manufacture a match merely because two records look similar.**
 
-- resolve a match — the policy engine re-checks ambiguity *after* adjudication,
-  so a tie stays an exception however confident the adjudicator is;
-- push a pair past the resolve threshold on its own — the clamp is enforced in
-  code, not trusted;
-- see the ground truth — it receives the same normalized fields the scorer does.
+The system deliberately separates these responsibilities:
 
-**`ADJUDICATOR=deterministic` is the default and produced every number above.**
-It is a second opinion computed from the features rather than a model: it
-recognises a gap that is within two rupees of a standard fee rate plus GST, a
-date offset matching a known settlement cycle, a reference that is a clean
-prefix truncation, and — costing confidence — a match carried by the counterparty
-alone, which is the pattern that produces false matches.
+| Component          | Responsibility                               |
+| ------------------ | -------------------------------------------- |
+| **Blocking**       | Protect recall and generate candidates       |
+| **Scoring**        | Rank candidates using deterministic evidence |
+| **Adjudication**   | Provide a bounded second opinion             |
+| **Policy**         | Own the final financial decision             |
+| **Exceptions**     | Preserve uncertainty instead of hiding it    |
+| **Audit receipts** | Make runs and reviews tamper-evident         |
+| **Evaluation**     | Measure performance against held-out truth   |
 
-`ADJUDICATOR=openai|anthropic` with `LLM_API_KEY` routes the same pairs to a
-model under the same clamp and the same schema. Every evaluation result records
-which one ran, because a match rate produced by a model and one produced by a
-scorer are different claims. A model failure falls back to the deterministic
-opinion and marks the result `fellBack` rather than failing the batch or
-silently resolving.
+The central invariant is:
 
-**Where deterministic matching suffices, and it mostly does:** clean,
-fee-deducted, timing-lag and duplicate shapes are all solved by the feature
-scorer alone. The adjudicator earns its place only in the ambiguous band, and on
-this corpus that is a few dozen pairs out of a thousand.
+> **Similarity creates candidates. Policy creates matches.**
 
 ---
 
-## Failure engineering
+# Results
 
-| Failure | Caught where | What happens | What must never happen |
-| --- | --- | --- | --- |
-| Ambiguous many-to-one | Policy, mutual-exclusivity test | Exception with **every** indistinguishable candidate attached | A confident pick between interchangeable records |
-| Missing counterpart | Policy, empty candidate set | `MISSING_COUNTERPART` with the amount at risk | Filing it as a low-confidence match |
-| Duplicate delivery | Ingestion, unique index | Stored with `duplicateOfId`, excluded from matching | A second plausible match for money that moved once |
-| Malformed row | CSV parser, before any write | Rejected with its line number | Coercing an unparseable amount |
-| Oversized upload | Ingestion, before parsing | 413 with the limit stated | Parsing first, checking after |
-| Adjudicator down | Adjudicator, any failure | Deterministic fallback, marked `fellBack` | Failing the batch, or silently resolving |
-| No ground truth | Evaluator | Refuses to compute precision/recall | Reporting metrics it cannot support |
+**728 records across 5 sources, with 1,098 held-out ground-truth pairs.**
 
-The exception queue is **ordered by money at risk, not by time**. A controller
-with forty exceptions and an hour should start with the expensive ones, and a
-chronological queue actively prevents that.
+The matcher never sees ground truth during reconciliation.
 
-When the engine could not tell three bank lines apart, the queue shows **all
-three**, side by side. Showing one and asking "approve?" launders a coin-flip
-through a person and produces an approval that looks like human judgement.
+| Metric             | Exact-join baseline | Fuzzy + adjudicator |
+| ------------------ | ------------------: | ------------------: |
+| Match rate         |               84.5% |           **89.0%** |
+| Precision          |               1.000 |           **1.000** |
+| Recall             |               0.596 |           **0.934** |
+| F1                 |               0.747 |           **0.966** |
+| False matches      |                   0 |               **0** |
+| Missed pairs       |                 432 |              **30** |
+| Exceptions raised  |                 113 |              **78** |
+| Unresolved records |                 101 |               **3** |
+| Throughput         |      ~8,000 rec/sec |      ~7,800 rec/sec |
 
-A review does not delete the exception it settles. The audit trail records the
-engine's confidence, the number of candidates offered, and the amount at risk as
-they stood at the time — because an approval on an exception that offered three
-indistinguishable candidates is not the same decision as one that offered a
-single clear counterpart.
+### Per-defect evaluation
+
+| Shape               | Truth pairs | Recovered | False | To a person |   Lost |    Recall |
+| ------------------- | ----------: | --------: | ----: | ----------: | -----: | --------: |
+| clean               |         360 |       360 |     0 |           0 |      0 | **1.000** |
+| fee-deducted        |         340 |       340 |     0 |           0 |      0 | **1.000** |
+| split-settlement    |         210 |       168 |     0 |          12 | **30** | **0.800** |
+| timing-lag          |          66 |        66 |     0 |           0 |      0 | **1.000** |
+| reference-typo      |          60 |        60 |     0 |           0 |      0 | **1.000** |
+| missing-counterpart |           8 |         8 |     0 |           0 |      0 | **1.000** |
+| duplicate           |          24 |        24 |     0 |           0 |      0 | **1.000** |
+| many-to-one         |          30 |     **0** | **0** |      **30** |      0 | **0.000** |
+
+---
+
+# Reading These Results Honestly
+
+## The many-to-one 0.000 recall is intentional
+
+Three identical credits from one merchant on one day can have references mangled beyond recognition.
+
+If nothing distinguishes them, the system does **not** randomly select one.
+
+Instead:
+
+```text
+Ambiguous candidates
+        ↓
+   Policy detects
+   mutual ambiguity
+        ↓
+     EXCEPTION
+        ↓
+   Human review
+```
+
+The important property is:
+
+> **Uncertainty is preserved instead of converted into a false match.**
+
+A matcher that reports a "correct" answer here may simply be lucky on this corpus.
+
+---
+
+## Split-settlement recall of 0.800 is the real weakness
+
+30 truth pairs are currently lost outright.
+
+The merge pass can recover a split when:
+
+```text
+part A + part B = whole
+```
+
+and the references are compatible.
+
+However, it cannot currently recover every split where the reference is also mangled.
+
+This is the largest known matching weakness.
+
+---
+
+## Precision is not presented as universal truth
+
+The zero-false-match result is partly fitted to this synthetic corpus's reference format.
+
+The reference-disambiguation rule is therefore documented explicitly rather than presented as a universal property of reconciliation.
+
+A production system would need to re-derive these rules against the actual ledger distributions and operational loss data.
+
+---
+
+## Ground truth is never fabricated
+
+Generated records have labelled truth groups.
+
+Uploaded records do not.
+
+Therefore:
+
+> **The evaluator refuses to calculate precision and recall where ground truth does not exist.**
+
+---
+
+# Architecture
+
+The entire system can be understood through **one end-to-end flow**:
+
+```mermaid
+flowchart LR
+
+    %% =========================================================
+    %% INPUTS
+    %% =========================================================
+
+    subgraph SOURCES["01 · FINANCIAL SOURCES"]
+        O["Orders<br/>order_…"]
+        P["Payments<br/>pay_…"]
+        S["Settlements<br/>setl_…"]
+        B["Bank Statements<br/>NEFT / HDFC / …"]
+        I["Invoices<br/>tax · counterparty"]
+    end
+
+    %% =========================================================
+    %% DATA PLANE
+    %% =========================================================
+
+    subgraph DATA["02 · DATA PLANE"]
+        ING["INGESTION<br/><br/>Schema validation<br/>Malformed-row rejection<br/>Duplicate detection<br/>Upload-size limits"]
+
+        NORM["NORMALIZATION<br/><br/>Reference cleanup<br/>Date normalization<br/>Amount normalization<br/>Currency normalization<br/>Fee / GST representation"]
+    end
+
+    %% =========================================================
+    %% MATCHING
+    %% =========================================================
+
+    subgraph MATCH["03 · MATCHING PLANE"]
+        BLOCK["BLOCKING<br/><br/>Recall-first candidate generation<br/>Reference · prefix · amount buckets<br/>Counterparty + date<br/><br/><b>Never makes a decision</b>"]
+
+        SCORE["DETERMINISTIC SCORING<br/><br/>Five evidence features<br/>Amount agreement<br/>Reference similarity<br/>Date proximity<br/>Counterparty evidence<br/>Hard safety gates"]
+
+        subgraph AI["BOUNDED AI BOUNDARY"]
+            ADJ["ADJUDICATOR<br/><br/>Ambiguous band only<br/>Deterministic by default<br/>Optional OpenAI / Anthropic<br/>Confidence clamp ±0.12<br/><br/><b>AI proposes · AI does not decide</b>"]
+        end
+
+        POLICY["POLICY ENGINE<br/><br/>Resolve threshold<br/>Ambiguity detection<br/>Mutual exclusivity<br/>Missing-counterpart rules<br/><br/><b>ONLY COMPONENT ALLOWED<br/>TO MAKE FINAL DECISION</b>"]
+    end
+
+    %% =========================================================
+    %% OUTCOMES
+    %% =========================================================
+
+    subgraph OUTCOMES["04 · CONTROLLED OUTCOMES"]
+        RESOLVE["RESOLVE<br/><br/>High-confidence relationship<br/>passes policy"]
+        EXCEPTION["EXCEPTION<br/><br/>Ambiguous / missing / unsafe<br/>money at risk preserved"]
+    end
+
+    %% =========================================================
+    %% RECONCILIATION MODEL
+    %% =========================================================
+
+    subgraph RECON["05 · RECONCILIATION MODEL"]
+        GROUP["CONNECTED RECONCILIATION GROUP<br/><br/>Union-Find + split merge<br/><br/>Order → Payment → Settlement → Bank"]
+        REVIEW["HUMAN REVIEW<br/><br/>All indistinguishable candidates<br/>Context + evidence + amount at risk<br/>Decision retained"]
+    end
+
+    %% =========================================================
+    %% AUDIT
+    %% =========================================================
+
+    AUDIT["HASH-CHAINED AUDIT LEDGER<br/><br/>Ingestion receipts<br/>Run receipts<br/>Review receipts<br/><br/>SHA-256(previous canonical payload)"]
+
+    %% =========================================================
+    %% EVALUATION / OPERATIONS
+    %% =========================================================
+
+    subgraph OPS["06 · EVALUATION + OPERATIONS"]
+        GT["HELD-OUT GROUND TRUTH<br/><br/>Precision · Recall · F1<br/>Per-defect evaluation"]
+
+        BASE["BASELINE COMPARISON<br/><br/>Exact join<br/>vs<br/>Fuzzy + adjudicator"]
+
+        API["API + DEMO SURFACE<br/><br/>Ingest · Reconcile<br/>Matches · Exceptions<br/>Reviews · Evaluate · Audit"]
+
+        VERIFY["VERIFICATION<br/><br/>Tests<br/>Typecheck<br/>Lint<br/>Build<br/>Reproducible corpus"]
+    end
+
+    %% =========================================================
+    %% MAIN FLOW
+    %% =========================================================
+
+    O --> ING
+    P --> ING
+    S --> ING
+    B --> ING
+    I --> ING
+
+    ING --> NORM
+    NORM --> BLOCK
+    BLOCK --> SCORE
+    SCORE --> ADJ
+    ADJ --> POLICY
+
+    %% =========================================================
+    %% DECISION
+    %% =========================================================
+
+    POLICY -->|High confidence + policy satisfied| RESOLVE
+    POLICY -->|Ambiguous / missing / unsafe| EXCEPTION
+
+    RESOLVE --> GROUP
+    EXCEPTION --> REVIEW
+    REVIEW --> AUDIT
+    GROUP --> AUDIT
+    POLICY --> AUDIT
+    ING --> AUDIT
+
+    %% =========================================================
+    %% OPERATIONS
+    %% =========================================================
+
+    GROUP --> GT
+    EXCEPTION --> GT
+    GT --> BASE
+
+    API -.-> ING
+    API -.-> POLICY
+    API -.-> REVIEW
+    API -.-> AUDIT
+
+    VERIFY -.-> DATA
+    VERIFY -.-> MATCH
+    VERIFY -.-> RECON
+
+    %% =========================================================
+    %% FAILURE / FALLBACK
+    %% =========================================================
+
+    ADJ -. "model unavailable" .-> FALLBACK["DETERMINISTIC FALLBACK<br/><br/>Batch continues<br/>fellBack = true"]
+    FALLBACK -.-> POLICY
+
+    %% =========================================================
+    %% STYLING
+    %% =========================================================
+
+    classDef source fill:#111820,stroke:#68727e,color:#f4f0e8,stroke-width:1px
+    classDef data fill:#171c22,stroke:#c59a45,color:#f4f0e8,stroke-width:2px
+    classDef match fill:#171c22,stroke:#c59a45,color:#f4f0e8,stroke-width:2px
+    classDef ai fill:#211a27,stroke:#9875ad,color:#f4f0e8,stroke-width:2px
+    classDef policy fill:#201d17,stroke:#d1a957,color:#f4f0e8,stroke-width:3px
+    classDef resolve fill:#14231e,stroke:#4d9677,color:#f4f0e8,stroke-width:2px
+    classDef exception fill:#26191b,stroke:#a55c60,color:#f4f0e8,stroke-width:2px
+    classDef audit fill:#1c1c1c,stroke:#d1a957,color:#f4f0e8,stroke-width:2px
+    classDef ops fill:#15191e,stroke:#59636d,color:#f4f0e8,stroke-width:1px
+    classDef fallback fill:#211d18,stroke:#9a7c45,color:#f4f0e8,stroke-width:1px
+
+    class O,P,S,B,I source
+    class ING,NORM data
+    class BLOCK,SCORE match
+    class ADJ ai
+    class POLICY policy
+    class RESOLVE,GROUP resolve
+    class EXCEPTION,REVIEW exception
+    class AUDIT audit
+    class GT,BASE,API,VERIFY ops
+    class FALLBACK fallback
+```
+
+### Architecture in one sentence
+
+> **Five heterogeneous financial sources → validated ingestion → normalization → recall-first blocking → deterministic scoring → bounded AI adjudication → policy-controlled decision → resolved reconciliation group OR money-at-risk exception → human review → hash-chained audit.**
+
+---
+
+# The Engine
+
+The system has clear decision boundaries.
+
+```text
+INGEST
+   │
+   ▼
+NORMALIZE
+   │
+   ▼
+BLOCKING
+   │
+   │  recall only
+   ▼
+SCORING
+   │
+   │  evidence only
+   ▼
+ADJUDICATOR
+   │
+   │  ambiguous band only
+   ▼
+POLICY
+   │
+   ├───────────────► RESOLVE
+   │
+   └───────────────► EXCEPTION
+                              │
+                              ▼
+                         HUMAN REVIEW
+                              │
+                              ▼
+                         AUDIT LEDGER
+```
+
+The important distinction is:
+
+```text
+Blocking      → finds candidates
+Scoring       → measures evidence
+Adjudicator   → gives bounded second opinion
+Policy        → makes decision
+Exception     → preserves uncertainty
+Audit         → records what happened
+```
+
+---
+
+# 1. Blocking
+
+Blocking is **recall-only**.
+
+Keys are deliberately loose and overlapping:
+
+* reference
+* reference prefix
+* adjacent amount buckets
+* counterparty + date
+
+The goal is:
+
+> **A missed block is a missed match forever.**
+
+728 records produce roughly **2,000 candidate pairs** instead of 264,628.
+
+Precision is therefore left entirely to scoring and policy.
+
+---
+
+# 2. Scoring
+
+Scoring produces five feature values and a weighted total.
+
+It does **not** make the final decision.
+
+Two hard gates are enforced.
+
+## Currency mismatch
+
+Different currencies are incomparable.
+
+The pair scores zero.
+
+## Same-source records
+
+Two records from the same source score zero.
+
+Reconciliation means finding a counterpart in a different system.
+
+---
+
+# Amount Agreement
+
+Amount agreement is not simply:
+
+```text
+|a - b| < ε
+```
+
+A difference explainable by:
+
+```text
+gateway fee + 18% GST
+```
+
+receives a strong score.
+
+The score then decays as the unexplained difference grows.
+
+This feature contributes significantly to the recall improvement:
+
+```text
+0.596 → 0.934
+```
+
+---
+
+# Policy Engine
+
+The policy engine is the **only component allowed to make the final decision**.
+
+Its most important rule is:
+
+> **Ambiguity is mutual exclusivity, not similarity.**
+
+Two candidates are mutually exclusive when:
+
+1. They come from the same source.
+2. Each one independently accounts for the subject's amount.
+
+This distinction matters.
+
+Consider:
+
+```text
+Order
+  │
+  ├── Payment
+  ├── Settlement
+  └── Bank line
+```
+
+The other three records may all look highly similar.
+
+They are not three competing answers.
+
+They are the other components of the same financial event.
+
+---
+
+## Split settlement
+
+For example:
+
+```text
+Order: ₹1,000
+
+Bank line A: ₹400
+Bank line B: ₹600
+```
+
+These are complementary.
+
+```text
+₹400 + ₹600 = ₹1,000
+```
+
+The system can therefore merge them into one reconciliation relationship when the other policy conditions are satisfied.
+
+---
+
+## True ambiguity
+
+Now consider:
+
+```text
+Order: ₹1,000
+
+Bank line A: ₹1,000
+Bank line B: ₹1,000
+```
+
+These are alternatives.
+
+Picking one is guessing.
+
+The correct outcome is:
+
+```text
+                    ┌── Bank line A
+Order → ambiguity ──┤
+                    └── Bank line B
+                           │
+                           ▼
+                      EXCEPTION
+                           │
+                           ▼
+                     HUMAN REVIEW
+```
+
+---
+
+# Matches Are Groups, Not Pairs
+
+The system does not treat reconciliation as a collection of isolated pairwise matches.
+
+Confirmed relationships are unioned into **connected components**.
+
+Example:
+
+```text
+                  ┌── Payment
+                  │
+Order ────────────┼── Settlement
+                  │
+                  └── Bank statement
+```
+
+These become one reconciliation group.
+
+This allows the system to reason about the **complete financial event** rather than producing disconnected pair matches.
+
+The implementation uses:
+
+```text
+Union-Find
++
+Split-settlement merge
+```
+
+---
+
+# Where AI Sits — And Where It Does Not
+
+The default system is deterministic.
+
+The adjudicator is invoked **only for candidates inside the ambiguous band**.
+
+## AI can
+
+* nudge confidence within a strict bound
+* provide a reason
+* identify contextual evidence
+* help distinguish difficult candidate relationships
+
+## AI cannot
+
+* resolve a match by itself
+* bypass the policy engine
+* push a candidate across the resolve threshold
+* access ground truth
+* override ambiguity rules
+* silently change the final decision
+
+The architecture is intentionally:
+
+```text
+AI proposes
+     │
+     ▼
+Deterministic policy validates
+     │
+     ├──────────────► RESOLVE
+     │
+     └──────────────► EXCEPTION
+```
+
+Therefore:
+
+> **AI is a bounded second opinion, not the source of truth.**
+
+---
+
+# Adjudicator Modes
+
+## Deterministic
+
+The deterministic adjudicator is the default.
+
+No external model is required.
+
+It recognizes patterns such as:
+
+* fee + GST differences
+* known settlement-cycle delays
+* clean reference-prefix truncation
+* counterparty-supported matches
+
+This keeps the benchmark reproducible.
+
+---
+
+## OpenAI / Anthropic
+
+Optional model-backed adjudication can be enabled with:
+
+```text
+ADJUDICATOR=openai
+```
+
+or:
+
+```text
+ADJUDICATOR=anthropic
+```
+
+with:
+
+```text
+LLM_API_KEY=...
+```
+
+The model receives the same normalized information and operates under the same confidence clamp.
+
+The external model does **not** become the final authority.
+
+---
+
+## Model failure
+
+If the adjudicator becomes unavailable:
+
+```text
+model failure
+     │
+     ▼
+deterministic fallback
+     │
+     ▼
+fellBack = true
+     │
+     ▼
+policy continues
+```
+
+The batch does not silently fail.
+
+It also does not silently resolve through a missing model.
+
+---
+
+# Failure Engineering
+
+Financial systems should be designed around their failure modes.
+
+| Failure               | Caught where | What happens                                     | What must never happen      |
+| --------------------- | ------------ | ------------------------------------------------ | --------------------------- |
+| Ambiguous many-to-one | Policy       | Exception with every indistinguishable candidate | Confident coin-flip         |
+| Missing counterpart   | Policy       | `MISSING_COUNTERPART` + amount at risk           | Low-confidence match        |
+| Duplicate delivery    | Ingestion    | Stored with `duplicateOfId`                      | Second match                |
+| Malformed row         | CSV parser   | Rejected with line number                        | Coercion                    |
+| Oversized upload      | Ingestion    | HTTP 413                                         | Parse first                 |
+| Adjudicator down      | Adjudicator  | Deterministic fallback                           | Batch failure               |
+| No ground truth       | Evaluator    | Metrics refused                                  | Fabricated precision/recall |
+
+---
+
+# Exception Queue
+
+Exceptions are ordered by:
+
+> **Money at risk**
+
+rather than chronological order.
+
+If a controller has forty exceptions and one hour, the highest-value uncertainties should be reviewed first.
+
+When three records are indistinguishable, the queue shows **all three**.
+
+It does not reduce the situation to:
+
+```text
+Candidate A
+
+Approve?
+```
+
+That would turn a coin flip into an apparently human-approved decision.
+
+Instead:
+
+```text
+Exception
+   │
+   ├── Candidate A
+   ├── Candidate B
+   └── Candidate C
+          │
+          ▼
+    Human review
+```
+
+The original uncertainty remains visible.
+
+---
+
+# Audit
+
+Every ingestion, reconciliation run, and review appends a **hash-chained receipt**.
+
+Each receipt contains the SHA-256 hash of the previous canonical payload.
+
+Conceptually:
+
+```text
+┌─────────────────────┐
+│     Receipt N       │
+│                     │
+│ payload             │
+│ SHA-256(payload)    │
+│ previousHash        │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│     Receipt N+1     │
+│                     │
+│ payload             │
+│ SHA-256(payload)    │
+│ previousHash        │
+└─────────────────────┘
+```
+
+Therefore:
+
+* removing a receipt breaks the chain
+* editing a receipt breaks its own hash
+* each important state transition remains traceable
+
+The system detects removal and modification as separate incidents because they represent different audit conditions.
+
+---
+
+# Data
+
+All included data is **synthetic**.
+
+Identifiers intentionally resemble payment infrastructure:
+
+```text
+order_...
+pay_...
+setl_...
+```
+
+This makes the relationships realistic without using live payment data.
+
+## No live credentials
+
+The repository:
+
+* does not read live credentials
+* does not call Razorpay production endpoints
+* does not depend on live payment data
+
+The corpus uses fixed counts per defect shape rather than probability sampling.
+
+This guarantees that difficult cases remain present on every evaluation run.
+
+---
+
+## Reference corruption
+
+The generator models realistic failure patterns such as:
+
+* truncation
+* case folding
+* separator substitution
+* OCR-like confusions
+* dropped characters
+
+---
+
+# Design
+
+## Art Deco, 1931
+
+The interface uses an Art Deco-inspired visual language:
+
+* midnight ground
+* brass rules
+* stepped geometry
+* wide display typography
+* symmetrical composition
+
+The visual language mirrors the reconciliation model:
+
+```text
+BOOKS                         BANK
+
+  │                             │
+  │────────── MATCH ────────────│
+  │                             │
+```
+
+The match-detail view uses a **tie-line ledger**:
+
+```text
+BOOKS                         BANK
+
+Order ────────────────────────┐
+                              │
+Payment ──────────────────────┼────── Bank
+                              │
+Settlement ───────────────────┘
+```
+
+Residuals are displayed on the centre axis.
+
+---
+
+# Running It
+
+```bash
+npm install
+
+npm run db:migrate
+
+npm run gen:ledgers
+
+npm run reconcile
+
+npm run reconcile -- --baseline
+
+npm run evaluate
+
+npm test
+
+npm run verify
+```
+
+## What each command does
+
+| Command                           | Purpose                                              |
+| --------------------------------- | ---------------------------------------------------- |
+| `npm install`                     | Install dependencies                                 |
+| `npm run db:migrate`              | Run database migrations                              |
+| `npm run gen:ledgers`             | Generate seeded synthetic ledgers                    |
+| `npm run reconcile`               | Run reconciliation                                   |
+| `npm run reconcile -- --baseline` | Run exact-join baseline                              |
+| `npm run evaluate`                | Evaluate precision, recall, F1 and per-shape results |
+| `npm test`                        | Run test suite                                       |
+| `npm run verify`                  | Typecheck + lint + tests + build                     |
+
+---
+
+# Database
+
+The default deployment uses:
+
+```text
+DATABASE_URL=pglite://:memory:
+```
+
+This runs entirely in memory.
+
+The same migrations can be used with PostgreSQL:
+
+```text
+DATABASE_URL=postgres://...
+```
+
+The deployed environment generates, reconciles, and evaluates the corpus during bootstrap.
+
+---
+
+# API
+
+## Ingest
+
+```http
+POST /api/ingest
+```
+
+Generate or upload records.
+
+Generate:
+
+```json
+{
+  "mode": "generate"
+}
+```
+
+Or upload CSV:
+
+```json
+{
+  "mode": "csv",
+  "kind": "...",
+  "csv": "..."
+}
+```
+
+---
+
+## Reconcile
+
+```http
+POST /api/reconcile
+```
+
+Run reconciliation.
+
+```json
+{
+  "strategy": "fuzzy+adjudicator",
+  "thresholds": {
+    "resolve": 0.82
+  }
+}
+```
+
+---
+
+## Matches
+
+```http
+GET /api/matches?runId=...
+```
+
+Retrieve reconciliation matches.
+
+---
+
+## Exceptions
+
+```http
+GET /api/exceptions?runId=...
+```
+
+Retrieve exceptions ordered by money at risk.
+
+---
+
+## Evaluate
+
+```http
+POST /api/evaluate
+```
+
+Run evaluation.
+
+```json
+{
+  "withBaseline": true
+}
+```
+
+---
+
+## Human reviews
+
+```http
+POST /api/reviews
+```
+
+Record human review.
+
+```json
+{
+  "exceptionId": "...",
+  "outcome": "ESCALATED",
+  "note": "..."
+}
+```
 
 ---
 
 ## Audit
 
-Every ingestion, run and review appends a hash-chained receipt naming the
-SHA-256 of its predecessor's canonical payload. Remove one and everything after
-it stops linking; edit one and its own hash stops matching. Both cases are
-detected and reported separately, because they are different incidents.
+```http
+GET /api/audit
+```
+
+Retrieve the audit ledger.
 
 ---
 
-## Data
+## Demo scenarios
 
-All synthetic, labelled as such on every page. Razorpay-shaped identifiers
-(`order_`, `pay_`, `setl_`) because match detail binds them and an unrealistic
-identifier would make the binding unconvincing. **No live credential is read and
-no Razorpay endpoint is called from this repository.**
-
-The corpus is built from **fixed counts per defect shape, not probabilities** — a
-corpus that only *usually* contains a many-to-one case is one whose hardest
-number moves for reasons unrelated to the matcher. Reference corruption models
-what actually happens (truncation to a field width, case folding, separator
-substitution, OCR confusions, dropped characters), not random character noise: a
-matcher tuned against random noise is tuned against the wrong thing.
+```http
+POST /api/demo/clean-batch
+POST /api/demo/fee-mismatch
+POST /api/demo/many-to-one-exception
+POST /api/demo/missing-counterpart
+POST /api/demo/baseline-vs-ai
+```
 
 ---
 
-## Design
+## Health
 
-**Art deco, 1931** — the visual language of the buildings finance was actually
-conducted in. Midnight ground, brass rules, stepped chevrons, wide display
-capitals. The reason it fits rather than being a mood: reconciliation is a
-two-column problem — books on one side, bank on the other, a line drawn between
-them when they agree — and deco is built on symmetry about a centre axis. The
-ornament and the data structure are the same shape.
+```http
+GET /api/health
+```
 
-The **tie-line ledger** on the match detail page is where that pays off: books
-left, bank right, a brass line for every pair the engine tied together, and the
-residual printed on the axis in jade when it is inside the declared fees and
-carmine when it is not.
+Health check.
 
 ---
 
-## Running it
+# Tuned, Not Derived
 
-```bash
-npm install
-npm run db:migrate        # PGlite: real PostgreSQL, in-process, no server
-npm run gen:ledgers       # seeded corpus with held-out ground truth
-npm run reconcile         # the engine
-npm run reconcile -- --baseline
-npm run evaluate          # precision, recall, per-shape, baseline comparison
-npm test                  # 55 tests against a real in-process database
-npm run verify            # typecheck + lint + tests + build
+The following thresholds were selected by running the synthetic corpus and observing where precision and recall crossed.
+
+They are **not universal financial rules**.
+
+| Parameter              |   Value | Purpose                  |
+| ---------------------- | ------: | ------------------------ |
+| `resolve`              |  `0.82` | Resolve threshold        |
+| `floor`                |  `0.45` | Minimum candidate score  |
+| `ambiguityMargin`      |  `0.08` | Near-tie detection       |
+| `dateWindowDays`       |    `12` | Settlement timing window |
+| `feeToleranceFraction` | `0.035` | Fee tolerance            |
+| `roundingSlackMinor`   |   `200` | ₹2 rounding tolerance    |
+| adjudicator clamp      | `±0.12` | Maximum AI influence     |
+| serial-reference score |   `0.3` | Candidate-only signal    |
+
+A production deployment would re-derive these values against real ledger distributions and operational loss data.
+
+---
+
+# Known Limits
+
+The system deliberately documents what it cannot currently solve.
+
+## 1. Mangled split-settlement references
+
+Split settlements whose references are also mangled can currently be lost rather than queued.
+
+**This is the largest known weakness.**
+
+---
+
+## 2. Corpus-specific precision
+
+The zero-false-match result depends partly on the synthetic reference format.
+
+The reference rule must be re-derived for another ledger convention.
+
+---
+
+## 3. Default adjudicator is deterministic
+
+The reported benchmark numbers were produced without an external model.
+
+This keeps evaluation reproducible.
+
+---
+
+## 4. Large blocks
+
+Blocks larger than 60 records are skipped rather than sampled.
+
+---
+
+## 5. Candidate persistence
+
+Candidates are persisted as a capped sample of 500 per run.
+
+The run page exposes both the sampled and total counts so the table cannot be mistaken for the complete candidate set.
+
+---
+
+# Engineering Principles
+
+This project is built around a few non-negotiable principles:
+
+```text
+Similarity creates candidates.
+Policy creates matches.
+
+AI proposes.
+Deterministic code decides.
+
+Uncertainty becomes an exception.
+It does not become a guess.
+
+Ground truth is measured.
+It is never invented.
+
+Every important decision leaves an audit trail.
 ```
 
-`DATABASE_URL=pglite://:memory:` runs entirely in memory, which is what the
-deployment uses: a serverless filesystem is read-only apart from an ephemeral
-`/tmp`. The corpus is therefore generated, reconciled twice and evaluated during
-bootstrap on each cold instance (~1.7s). The alternative is a deployed
-reconciliation dashboard with nothing in it.
+---
 
-`postgres://…` switches to a real server with the same migrations.
+# Why This Architecture
 
-## API
+The goal is not to build a system that claims to match everything.
 
+The goal is to build a system that can answer:
+
+> **"Why did you match these records?"**
+
+And, equally importantly:
+
+> **"Why didn't you match those records?"**
+
+For financial reconciliation, that distinction matters more than a single headline accuracy number.
+
+The architecture therefore optimizes for:
+
+```text
+RECALL
+  +
+PRECISION
+  +
+EXPLAINABILITY
+  +
+FAILURE SAFETY
+  +
+AUDITABILITY
 ```
-POST /api/ingest       { "mode": "generate" } | { "mode": "csv", "kind": "...", "csv": "..." }
-POST /api/reconcile    { "strategy": "fuzzy+adjudicator", "thresholds": { "resolve": 0.82 } }
-GET  /api/matches?runId=
-GET  /api/exceptions?runId=      ordered by money at risk
-POST /api/evaluate     { "withBaseline": true }
-POST /api/reviews      { "exceptionId": "...", "outcome": "ESCALATED", "note": "..." }
-GET  /api/audit
-POST /api/demo/<clean-batch|fee-mismatch|many-to-one-exception|missing-counterpart|baseline-vs-ai>
-GET  /api/health
+
+rather than blindly optimizing for:
+
+```text
+"match as much as possible"
 ```
 
-## Tuned, not derived
+---
 
-Every threshold below was set by running this corpus and reading where precision
-and recall crossed. None is derived from loss data, and all would need
-re-deriving for a real ledger. Each is labelled at its definition.
+# Core Invariant
 
-| | | |
-| --- | --- | --- |
-| `resolve` | 0.82 | below it the reference-typo shape starts producing false matches |
-| `floor` | 0.45 | below it a candidate is noise, and queueing it wastes review time |
-| `ambiguityMargin` | 0.08 | tighter, and the many-to-one near-ties let a coin-flip resolve |
-| `dateWindowDays` | 12 | the corpus lags up to 11 days; a real deployment sets this from its T+n contract |
-| `feeToleranceFraction` | 0.035 | a 2.5% fee plus 18% GST tops out near 2.95% |
-| `roundingSlackMinor` | 200 | two rupees, for paise rounding on a split |
-| adjudicator clamp | ±0.12 | enough to move a borderline pair, never enough to decide one |
-| serial-reference score | 0.3 | keeps such a pair in the candidate set, far too little to resolve it alone |
+Everything in this repository ultimately reduces to one rule:
 
-## Known limits
+```text
+                    ┌─────────────────────┐
+                    │      SIMILARITY     │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                         CANDIDATES
+                               │
+                               ▼
+                    ┌─────────────────────┐
+                    │      POLICY         │
+                    │                     │
+                    │ Can we distinguish  │
+                    │ this safely?        │
+                    └──────────┬──────────┘
+                               │
+                  ┌────────────┴────────────┐
+                  │                         │
+                  ▼                         ▼
+              RESOLVE                   EXCEPTION
+                  │                         │
+                  ▼                         ▼
+              GROUP                  HUMAN REVIEW
+                  │                         │
+                  └────────────┬────────────┘
+                               ▼
+                         AUDIT RECEIPT
+```
 
-- **Split settlements with a mangled reference are lost**, not queued. 30 pairs
-  on this corpus. The merge pass requires a shared normalized reference before
-  it will try summation, because without that constraint it becomes subset-sum
-  over the whole ledger — intractable, and an excellent way to invent matches
-  out of arithmetic coincidence.
-- **Precision is partly fitted to this corpus's reference format.** See above.
-- **No model was called.** The default adjudicator is deterministic and every
-  reported number came from it.
-- **Blocks larger than 60 records are skipped**, not sampled. A block that has
-  swallowed a large share of the corpus is not a block, but the skip is silent
-  in the sense that it does not appear as its own metric — only as a lower
-  candidate count.
-- **Candidates are persisted as a capped sample of 500 per run.** The run page
-  prints both numbers so the table is not mistaken for the full set.
+> **A financial system should be aggressive about finding possibilities and conservative about declaring certainty.**
+
+---
+
+<div align="center">
+
+### Built for trustworthy financial automation.
+
+**Recover aggressively. Decide conservatively. Audit everything.**
+
+</div>
