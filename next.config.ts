@@ -18,7 +18,14 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
+              // 'unsafe-eval' is added in DEVELOPMENT ONLY: Next.js's dev
+              // bundler wraps every module in eval() for source maps, so
+              // without it a `npm run dev` instance has its entire client
+              // runtime blocked by this CSP. A production build uses no eval,
+              // so the deployed policy stays strict.
+              process.env.NODE_ENV === "development"
+                ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+                : "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data:",
               "connect-src 'self'",
